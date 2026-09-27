@@ -5,30 +5,50 @@
 import fs from 'fs';
 
 const BBOX = '13.20,99.80,14.45,101.40'; // S,W,N,E — covers all three rivers down to their mouths
-const QUERY = `[out:json][timeout:120];
-way["waterway"="river"]["name"~"แม่น้ำเจ้าพระยา|แม่น้ำท่าจีน|แม่น้ำนครชัยศรี|แม่น้ำบางปะกง"](${BBOX});
+// exact-name unions scan far faster than a regex over the whole bbox
+const QUERY = `[out:json][timeout:180];
+(
+  way["waterway"="river"]["name"="แม่น้ำท่าจีน"](${BBOX});
+  way["waterway"="river"]["name"="แม่น้ำนครชัยศรี"](${BBOX});
+  way["waterway"="river"]["name"="แม่น้ำบางปะกง"](${BBOX});
+  way["waterway"="river"]["name"="แม่น้ำเจ้าพระยา"](${BBOX});
+);
 out geom;`;
 
 const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.osm.ch/api/interpreter',
+  'https://overpass.openstreetmap.ru/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
 ];
 
 let fresh = null;
-for (const url of ENDPOINTS) {
-  try {
-    console.log('fetching rivers from', url, '…');
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'data=' + encodeURIComponent(QUERY),
-      signal: AbortSignal.timeout(150000),
-    });
-    if (!res.ok) { console.log('  HTTP', res.status, '— trying next endpoint'); continue; }
-    fresh = await res.json();
-    break;
-  } catch (e) {
-    console.log('  failed:', e.message, '— trying next endpoint');
+outer:
+for (let attempt = 1; attempt <= 5 && !fresh; attempt++) {
+  for (const url of ENDPOINTS) {
+    try {
+      console.log(`fetching rivers (attempt ${attempt}) from`, url, '…');
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'klong-bangkok-build/1.0 (local dev build)',
+        },
+        body: 'data=' + encodeURIComponent(QUERY),
+        signal: AbortSignal.timeout(180000),
+      });
+      if (!res.ok) { console.log('  HTTP', res.status, '— trying next endpoint'); continue; }
+      fresh = await res.json();
+      break outer;
+    } catch (e) {
+      console.log('  failed:', e.message, '— trying next endpoint');
+    }
+  }
+  if (!fresh && attempt < 5) {
+    console.log('all endpoints busy — waiting 30 s before retrying');
+    await new Promise(r => setTimeout(r, 30000));
   }
 }
 if (!fresh) { console.error('all Overpass endpoints failed — keeping existing raw_river.json'); process.exit(1); }
