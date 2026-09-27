@@ -1064,20 +1064,34 @@
     const secs = sectionsByCanal.get(key);
     // every geom is an array of [lon, lat] lines: one per reach, or all parts
     const geoms = secs ? secs.list.map(sec => [sec.line]) : [f.geometry.coordinates];
-    const layers = geoms.map((geom, i) => {
-      const layer = L.polyline(toLatLngs(geom),
-        { ...layerStyle(f, i), pane: 'overlayPane', bubblingMouseEvents: false });
+    const wireCanal = layer => {
       layer.bindTooltip(displayName(p), { sticky: true, className: 'canal-tip', direction: 'top' });
       layer.on('click', () => selectCanal(key));
       layer.on('mouseover', () => { clearTimeout(hoverTimer); applyHover(f, true); });
       // sliding across a reach boundary fires out+in — debounce so the
       // whole-canal highlight doesn't flicker at the seams
       layer.on('mouseout', () => { clearTimeout(hoverTimer); hoverTimer = setTimeout(() => applyHover(f, false), 60); });
+    };
+    // the drawn lines are 1–7px and nearly impossible to hit when dimmed, so
+    // each one also gets an invisible fat stroke as its click target (opacity 0
+    // still receives pointer events on the stroke). Hit lines are added under
+    // their own visible line so the status draw order keeps deciding who wins
+    // where canals overlap
+    const hitLayers = geoms.map(geom => {
+      const layer = L.polyline(toLatLngs(geom),
+        { weight: 14, opacity: 0, pane: 'overlayPane', bubblingMouseEvents: false });
+      wireCanal(layer);
+      return layer;
+    });
+    const layers = geoms.map((geom, i) => {
+      const layer = L.polyline(toLatLngs(geom),
+        { ...layerStyle(f, i), pane: 'overlayPane', bubblingMouseEvents: false });
+      wireCanal(layer);
       return layer;
     });
     const lv = liveByCanal[key];
     const home = lv && statusLayers[lv.status] ? statusLayers[lv.status] : baseLayer;
-    for (const layer of layers) layer.addTo(home);
+    for (const layer of [...hitLayers, ...layers]) layer.addTo(home);
     featureToLayer.set(f, layers);
   }
   baseLayer.addTo(map); // unmonitored canals — always on
