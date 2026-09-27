@@ -69,10 +69,12 @@ only the basemap tiles need internet.)
 - **Gates & pumping stations** — key flood-control structures
 - **Location lookup ("which canals connect here?")** — enter coordinates (lat,lng
   or a pasted Google Maps link), press 📍 and click the map, or use the browser's
-  own location: a pin is dropped and every canal within 500 m is highlighted
-  (the rest dimmed). The panel lists each nearby canal with its direct junctions
-  — every junction is clickable and opens the full drainage trace — plus any
-  gates / pumping stations within reach.
+  own location: a pin is dropped and every canal within the search radius is
+  highlighted (the rest dimmed) — the radius is adjustable from 200 m to 5 km
+  in the sidebar and the choice persists. The panel lists each nearby canal
+  with its direct junctions — every junction is clickable and opens the full
+  drainage trace — plus any gates / pumping stations within reach; the dropped
+  pin stays on the map while you explore traces.
 - Searchable canal list, risk-level filters, base-map switcher
 
 ## Data & disclaimers

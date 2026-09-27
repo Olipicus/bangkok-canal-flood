@@ -9,6 +9,8 @@
   --med: #fb8c00;
   --low: #43a047;
   --border: #2a3b4d;
+  --sidebar-w: 360px;
+  --detail-w: 340px;
 }
 
 * { box-sizing: border-box; }
@@ -17,21 +19,31 @@ html, body {
   margin: 0; height: 100%;
   font-family: -apple-system, "Segoe UI", "Noto Sans Thai", Roboto, sans-serif;
   background: var(--bg); color: var(--text);
+  -webkit-text-size-adjust: 100%;
 }
 
-#map { position: absolute; inset: 0 0 0 360px; background: #0d1218; }
+/* app shell: pin to the visual viewport so mobile browser chrome
+   (address bar, keyboard with interactive-widget=resizes-content)
+   never leaves a gap, and page rubber-banding stays off */
+body {
+  position: fixed; inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#map { position: absolute; inset: 0 0 0 var(--sidebar-w); background: #0d1218; }
 #map.dark-tiles .leaflet-tile-pane { filter: brightness(0.85); }
 
 /* ---------- sidebar ---------- */
 #sidebar {
-  position: absolute; inset: 0 auto 0 0; width: 360px; z-index: 1000;
+  position: absolute; inset: 0 auto 0 0; width: var(--sidebar-w); z-index: 1000;
   background: var(--panel); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; overflow-y: auto;
   scrollbar-width: thin; scrollbar-color: var(--border) transparent;
 }
 
 #sidebar-toggle {
-  position: absolute; top: 12px; left: 372px; z-index: 1001;
+  position: absolute; top: 12px; left: calc(var(--sidebar-w) + 12px); z-index: 1001;
   background: var(--panel-2); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px;
   width: 36px; height: 36px; font-size: 17px; cursor: pointer;
@@ -42,7 +54,7 @@ body.collapsed #sidebar-toggle { left: 12px; }
 
 /* ---------- help popover ---------- */
 #help-toggle {
-  position: absolute; top: 56px; left: 372px; z-index: 1001;
+  position: absolute; top: 56px; left: calc(var(--sidebar-w) + 12px); z-index: 1001;
   background: var(--panel-2); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px;
   width: 36px; height: 36px; font-size: 15px; font-weight: 700; cursor: pointer;
@@ -51,7 +63,7 @@ body.collapsed #sidebar-toggle { left: 12px; }
 #help-toggle.active { background: var(--accent); color: #0d1218; border-color: var(--accent); }
 body.collapsed #help-toggle { left: 12px; }
 #help-panel {
-  position: absolute; top: 100px; left: 372px; z-index: 1002;
+  position: absolute; top: 100px; left: calc(var(--sidebar-w) + 12px); z-index: 1002;
   width: 330px; max-width: calc(100vw - 24px);
   background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
   padding: 14px 16px 16px;
@@ -61,12 +73,19 @@ body.collapsed #help-panel { left: 12px; }
 .help-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .help-head h2 { margin: 0; }
 
-#sidebar header { padding: 20px 20px 12px; border-bottom: 1px solid var(--border); }
-#sidebar h1 { margin: 0; font-size: 22px; letter-spacing: 0.3px; }
+#sidebar header { position: relative; padding: 20px 20px 12px; border-bottom: 1px solid var(--border); }
+#sidebar h1 { margin: 0; font-size: 22px; letter-spacing: 0.3px; flex: 1 1 auto; }
+#sidebar-close {
+  display: none; flex: 0 0 auto;
+  background: var(--panel-2); color: var(--text); cursor: pointer;
+  border: 1px solid var(--border); border-radius: 6px;
+  width: 30px; height: 30px; font-size: 13px; line-height: 1;
+}
 .subtitle { margin: 4px 0 0; color: var(--accent); font-size: 13px; }
 
 /* language switch */
 .title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.app-logo { flex: 0 0 auto; width: 40px; height: 40px; object-fit: contain; }
 #lang-toggle {
   display: flex; flex: 0 0 auto;
   border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
@@ -141,7 +160,7 @@ footer { font-size: 11px; line-height: 1.55; color: var(--muted); border-bottom:
 
 /* ---------- right detail panel ---------- */
 #detail-panel {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 340px; z-index: 1000;
+  position: absolute; top: 0; right: 0; bottom: 0; width: var(--detail-w); z-index: 1000;
   background: var(--panel); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow-y: auto;
   transform: translateX(100%); visibility: hidden;
@@ -158,15 +177,15 @@ footer { font-size: 11px; line-height: 1.55; color: var(--muted); border-bottom:
 #detail-close, #help-close {
   background: var(--panel-2); color: var(--text); cursor: pointer;
   border: 1px solid var(--border); border-radius: 6px;
-  width: 28px; height: 28px; font-size: 13px; line-height: 1;
+  width: 32px; height: 32px; font-size: 14px; line-height: 1;
 }
 #detail-close:hover, #help-close:hover { border-color: var(--accent); color: var(--accent); }
 #detail-body { padding: 14px 18px 18px; }
 
-body.detail-open #map { inset: 0 340px 0 360px; }
-body.detail-open.collapsed #map { inset: 0 340px 0 0; }
-body.detail-open #trace-chip { left: calc(360px + (100% - 360px - 340px) / 2); }
-body.detail-open.collapsed #trace-chip { left: calc((100% - 340px) / 2); }
+body.detail-open #map { inset: 0 var(--detail-w) 0 var(--sidebar-w); }
+body.detail-open.collapsed #map { inset: 0 var(--detail-w) 0 0; }
+body.detail-open #trace-chip { left: calc(var(--sidebar-w) + (100% - var(--sidebar-w) - var(--detail-w)) / 2); }
+body.detail-open.collapsed #trace-chip { left: calc((100% - var(--detail-w)) / 2); }
 
 /* ---------- detail content (pop-* classes reused in the side panel) ---------- */
 .pop-title { font-size: 15px; font-weight: 600; margin-bottom: 1px; }
@@ -190,7 +209,7 @@ body.detail-open.collapsed #trace-chip { left: calc((100% - 340px) / 2); }
 /* ---------- trace ---------- */
 #trace-chip {
   position: absolute; top: 12px; z-index: 1002;
-  left: calc(360px + (100% - 360px) / 2); transform: translateX(-50%);
+  left: calc(var(--sidebar-w) + (100% - var(--sidebar-w)) / 2); transform: translateX(-50%);
   background: rgba(13, 22, 30, 0.92); color: var(--text);
   border: 1px solid var(--accent); border-radius: 20px;
   padding: 8px 16px; font-size: 12.5px; pointer-events: none;
@@ -237,6 +256,14 @@ body.collapsed #trace-chip { left: 50%; }
 }
 .leaflet-tooltip.canal-tip::before { display: none; }
 .leaflet-tooltip.sea-tip { color: #b2ebf2; border-color: #26c6da; white-space: nowrap; }
+
+/* vendor/leaflet.css points at images/layers.png, which isn't shipped —
+   draw the toggle icon inline so the control isn't a blank white box */
+.leaflet-control-layers-toggle,
+.leaflet-retina .leaflet-control-layers-toggle {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='26' height='26' fill='none' stroke='%234a5a6a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2 2 7.5 12 13l10-5.5L12 2z'/%3E%3Cpath d='M2 12.5 12 18l10-5.5'/%3E%3Cpath d='M2 17.5 12 23l10-5.5'/%3E%3C/svg%3E");
+  background-size: 26px 26px;
+}
 
 /* ---------- structure markers ---------- */
 .struct-marker {
@@ -359,15 +386,132 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
 .pop-live .live-stations .st-near { color: var(--accent); }
 #canal-list .livechip { flex: 0 0 7px; height: 7px; border-radius: 50%; }
 
-@media (max-width: 720px) {
-  #map { inset: 0; }
-  body.detail-open #map { inset: 0; } /* panel overlays on small screens */
-  #detail-panel { width: min(320px, 85vw); }
-  #sidebar { width: min(320px, 85vw); }
-  #sidebar-toggle { left: auto; right: 12px; }
-  body:not(.collapsed) #sidebar-toggle { right: calc(min(320px, 85vw) + 12px); }
-  #help-toggle { left: auto; right: 12px; }
-  body.collapsed #help-toggle { left: auto; }
-  body:not(.collapsed) #help-toggle { right: calc(min(320px, 85vw) + 12px); }
-  #help-panel { left: 12px; right: 12px; width: auto; }
+/* ---------- backdrop behind the mobile drawer ---------- */
+#backdrop { display: none; }
+
+/* =========================================================
+   tablet (portrait iPad, small laptops): slim inline sidebar,
+   detail results slide up as a bottom sheet over the map
+   ========================================================= */
+@media (max-width: 1023px) {
+  :root { --sidebar-w: 320px; }
+
+  #detail-panel {
+    top: auto; left: 0; right: 0; bottom: 0;
+    width: auto; max-height: 62vh; max-height: min(62dvh, 560px);
+    border-left: 0; border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(105%); visibility: hidden;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior: contain;
+  }
+  #detail-panel.open { transform: translateY(0); visibility: visible; }
+  /* grab handle + sticky header so the sheet reads as draggable */
+  #detail-panel header {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--panel);
+    padding-top: 24px;
+  }
+  #detail-panel header::before {
+    content: ''; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 44px; height: 4px; border-radius: 2px; background: var(--border);
+  }
+  #detail-body { padding: 12px 18px 20px; }
+
+  /* the sheet overlays the map — never shrink it */
+  #map, body.detail-open #map { inset: 0 0 0 var(--sidebar-w); }
+  body.collapsed #map, body.detail-open.collapsed #map { inset: 0; }
+  #trace-chip, body.detail-open #trace-chip { left: calc(var(--sidebar-w) + (100% - var(--sidebar-w)) / 2); }
+  body.collapsed #trace-chip, body.detail-open.collapsed #trace-chip { left: 50%; }
+
+  /* slim sidebar: crowded title-row (logo + title [+ close] + lang) —
+     shrink so the name stays on one line */
+  .title-row { gap: 8px; }
+  #sidebar h1 { font-size: 20px; }
+  #lang-toggle button { padding: 5px 10px; }
+
+  /* touch-friendly targets */
+  #canal-list { max-height: none; }
+  #canal-list li { padding: 11px 10px; font-size: 14px; }
+  .loc-list li { padding: 11px 9px; }
+  .conn-link { padding: 6px 12px; font-size: 12.5px; }
+  .loc-struct { padding: 10px 11px; }
+  .risk-filter, .struct-filter { padding: 10px; }
+  .risk-filter input, .struct-filter input { width: 17px; height: 17px; }
+  #lang-toggle button { padding: 6px 12px; }
+  #sidebar-toggle, #help-toggle { width: 40px; height: 40px; }
+  #help-toggle { top: 60px; }
+  #help-panel { top: 108px; }
+  #loc-go { padding: 10px 14px; }
+  #loc-pick, #loc-here { padding: 10px 8px; }
+  #search, #loc-input { padding: 11px 12px; }
+}
+
+/* =========================================================
+   phone: sidebar becomes a slide-in drawer over a full-screen
+   map; map first (drawer starts closed), tap backdrop to close
+   ========================================================= */
+@media (max-width: 767px) {
+  #backdrop {
+    display: block; position: absolute; inset: 0; z-index: 999;
+    background: rgba(4, 9, 14, 0.55);
+    opacity: 1; transition: opacity 0.25s ease;
+  }
+  body.collapsed #backdrop { opacity: 0; pointer-events: none; }
+
+  #map, body.detail-open #map { inset: 0; }
+
+  #sidebar {
+    width: min(86vw, 340px);
+    box-shadow: 8px 0 24px rgba(0,0,0,0.45);
+    transition: transform 0.28s ease, visibility 0.28s;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  body.collapsed #sidebar { display: flex; visibility: hidden; transform: translateX(-105%); }
+
+  /* floating buttons: one row at the top-left, hidden while the drawer
+     is open (the drawer has its own ✕, backdrop also closes it) */
+  #sidebar-toggle, #help-toggle {
+    width: 44px; height: 44px; font-size: 19px;
+    top: calc(12px + env(safe-area-inset-top));
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.45);
+  }
+  #sidebar-toggle {
+    left: max(12px, env(safe-area-inset-left));
+    font-size: 21px;
+  }
+  #help-toggle { left: calc(max(12px, env(safe-area-inset-left)) + 52px); }
+  body:not(.collapsed) #sidebar-toggle,
+  body:not(.collapsed) #help-toggle { display: none; }
+  body.collapsed #sidebar-toggle { left: max(12px, env(safe-area-inset-left)); }
+  body.collapsed #help-toggle { left: calc(max(12px, env(safe-area-inset-left)) + 52px); }
+
+  #sidebar-close { display: flex; align-items: center; justify-content: center; }
+  #sidebar header { padding: 16px 16px 12px; }
+  #sidebar h1 { font-size: 19px; }
+
+  #help-panel {
+    top: calc(66px + env(safe-area-inset-top));
+    left: 10px; right: 10px; width: auto;
+    max-height: 70vh; max-height: 70dvh;
+    overflow-y: auto;
+  }
+
+  /* status chip sits under the buttons and may wrap */
+  #trace-chip {
+    top: calc(66px + env(safe-area-inset-top));
+    left: 50% !important;
+    max-width: calc(100vw - 20px);
+    white-space: normal; text-align: center; line-height: 1.45;
+    font-size: 12px; padding: 7px 12px;
+  }
+
+  /* 16px inputs keep iOS Safari from zooming the page on focus */
+  #search, #loc-input, #loc-radius { font-size: 16px; }
+
+  footer { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+
+  .leaflet-container { font-size: 12px; }
 }

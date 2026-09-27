@@ -73,6 +73,7 @@
       live_near: 'nearby station',
       live_none: 'No BMA telemetry station on this canal.',
       live_more: '+{n} more stations',
+      sidebar_close_title: 'Close panel',
     },
     th: {
       title: 'คลองกรุงเทพฯ — แผนที่สถานการณ์น้ำท่วม',
@@ -143,6 +144,7 @@
       live_near: 'สถานีใกล้คลอง',
       live_none: 'ไม่มีสถานีตรวจวัดของ กทม. บนคลองนี้',
       live_more: '+อีก {n} สถานี',
+      sidebar_close_title: 'ปิดแผงข้อมูล',
     },
   };
   let lang = 'th';
@@ -175,7 +177,11 @@
   }
 
   // ---------- map ----------
-  const map = L.map('map', { zoomControl: true }).setView([13.728, 100.525], 11);
+  // phones: pinch/double-tap zooms, so skip the zoom buttons (they would
+  // also collide with the floating drawer/help buttons)
+  const isPhone = () => window.matchMedia('(max-width: 767px)').matches;
+  const isPhoneNow = isPhone();
+  const map = L.map('map', { zoomControl: !isPhoneNow }).setView([13.728, 100.525], 11);
 
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors', maxZoom: 19,
@@ -618,6 +624,7 @@
     drawLoc();
     showChip('loc');
     showDetail(locHtml(), () => locHtml());
+    closeDrawerOnMobile(); // let the map + bottom sheet take over
     map.flyTo([lat, lng], Math.max(map.getZoom(), 14), { duration: 0.9 });
   }
 
@@ -1014,6 +1021,7 @@
   function focusCanal(f) {
     const key = f.properties.key || f.properties.name;
     selectCanal(key);
+    closeDrawerOnMobile(); // picked from a list — show the map, not the list
     const layer = featureToLayer.get(f);
     if (layer) {
       const bounds = layer.getBounds().pad(0.25);
@@ -1058,6 +1066,7 @@
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
     document.getElementById('sidebar-toggle').title = t('toggle_panel');
+    document.getElementById('sidebar-close').title = t('sidebar_close_title');
     document.getElementById('detail-close').title = t('detail_close_title');
     document.getElementById('chip-sea').title = t('chip_sea_title');
     document.getElementById('help-toggle').title = t('help_btn_title');
@@ -1086,10 +1095,20 @@
   document.getElementById('lang-en').addEventListener('click', () => setLang('en'));
   applyLang();
 
-  // ---------- sidebar toggle ----------
-  document.getElementById('sidebar-toggle').addEventListener('click', () => {
-    document.body.classList.toggle('collapsed');
+  // ---------- sidebar / mobile drawer ----------
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  function setDrawerOpen(open) {
+    document.body.classList.toggle('collapsed', !open);
+    sidebarToggle.setAttribute('aria-expanded', String(open));
     setTimeout(() => map.invalidateSize(), 50);
-  });
+  }
+  // phones start on the map; the drawer opens on demand
+  if (isPhoneNow) document.body.classList.add('collapsed');
+  sidebarToggle.addEventListener('click', () => setDrawerOpen(true));
+  document.getElementById('sidebar-close').addEventListener('click', () => setDrawerOpen(false));
+  document.getElementById('backdrop').addEventListener('click', () => setDrawerOpen(false));
+  function closeDrawerOnMobile() {
+    if (isPhone()) setDrawerOpen(false);
+  }
   window.addEventListener('resize', () => map.invalidateSize());
 })();

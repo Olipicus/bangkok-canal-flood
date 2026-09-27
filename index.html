@@ -2,8 +2,11 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#10161d">
 <title>คลองกรุงเทพฯ — แผนที่สถานการณ์น้ำท่วม</title>
+<link rel="icon" type="image/png" href="images/logo-96.png">
+<link rel="apple-touch-icon" href="images/logo-180.png">
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -28,10 +31,14 @@
   </div>
 </div>
 
+<div id="backdrop" aria-hidden="true"></div>
+
 <aside id="sidebar">
   <header>
     <div class="title-row">
+      <img src="images/logo-96.png" alt="" class="app-logo" width="40" height="40">
       <h1 data-i18n="app_title">คลองกรุงเทพฯ</h1>
+      <button id="sidebar-close" type="button" title="ปิดแผงข้อมูล">✕</button>
       <div id="lang-toggle" role="group" aria-label="Language / ภาษา">
         <button id="lang-th" type="button" class="active" title="ไทย">ไทย</button>
         <button id="lang-en" type="button" title="English">EN</button>
