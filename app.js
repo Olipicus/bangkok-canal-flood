@@ -1031,9 +1031,10 @@
     const p = f.properties;
     const key = p.key || p.name;
     const secs = sectionsByCanal.get(key);
-    const geoms = secs ? secs.list.map(sec => sec.line) : [f.geometry.coordinates];
+    // every geom is an array of [lon, lat] lines: one per reach, or all parts
+    const geoms = secs ? secs.list.map(sec => [sec.line]) : [f.geometry.coordinates];
     const layers = geoms.map((geom, i) => {
-      const layer = L.polyline(toLatLngs([geom])[0],
+      const layer = L.polyline(toLatLngs(geom),
         { ...layerStyle(f, i), pane: 'overlayPane', bubblingMouseEvents: false });
       layer.bindTooltip(displayName(p), { sticky: true, className: 'canal-tip', direction: 'top' });
       layer.on('click', () => selectCanal(key));
