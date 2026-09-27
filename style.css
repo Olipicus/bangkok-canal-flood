@@ -419,6 +419,29 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
 .pop-live .live-levels b { font-size: 13px; }
 .pop-live .live-stations { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .pop-live .live-stations .st-near { color: var(--accent); }
+/* per-gauge reaches of a long canal (e.g. Saen Saep's 12 gauges) */
+.sec-list { margin-top: 9px; }
+.sec-list .sec-label {
+  text-transform: uppercase; font-size: 10px; letter-spacing: 0.6px;
+  color: var(--muted); margin-bottom: 2px;
+}
+.sec-row {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 4px; background: none; border: 0; border-bottom: 1px solid var(--border);
+  color: var(--text); font: inherit; font-size: 12px; text-align: left; cursor: pointer;
+}
+.sec-row:last-child { border-bottom: 0; }
+.sec-row:hover { background: rgba(255, 255, 255, 0.05); }
+.sec-row.active { background: rgba(79, 195, 247, 0.12); }
+.sec-row .live-dot { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; }
+.sec-row .sec-km { flex: none; min-width: 96px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.sec-row .sec-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sec-row .sec-name .sec-more { color: var(--accent); font-size: 10.5px; }
+.sec-row .sec-lvl { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sec-flash { animation: sec-flash-fade 1s ease-out forwards; }
+@keyframes sec-flash-fade { from { opacity: 0.85; } to { opacity: 0; } }
+/* district hint on same-named canals in lists */
+.dup-hint { color: var(--muted); font-size: 11px; }
 #canal-list .livechip { flex: 0 0 7px; height: 7px; border-radius: 50%; }
 
 /* ---------- backdrop behind the mobile drawer ---------- */

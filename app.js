@@ -64,7 +64,7 @@
       m_unit: 'm', km_unit: 'km',
       live_h: 'Live water levels',
       live_reading: 'Latest reading', live_fetched: 'Snapshot fetched',
-      live_src: `Water-level readings from the BMA Drainage and Sewerage Department telemetry (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>), mapped onto the canal network; statuses classified against BMA's thresholds exactly like <a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>. A static snapshot — refresh with <code>node fetch_live.mjs</code>.`,
+      live_src: `Water-level readings from the BMA Drainage and Sewerage Department telemetry (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>), mapped onto the canal network; statuses classified against BMA's thresholds exactly like <a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>. A static snapshot — refresh with <code>node fetch_live.mjs</code>. Long canals with several gauges are drawn reach by reach, each in its own gauge's colour, when selected.`,
       live_cri: 'critical', live_war: 'warning', live_nor: 'normal', live_dry: 'low water', live_fau: 'faulty',
       live_st_critical: 'Above critical level', live_st_warning: 'Above warning level',
       live_st_normal: 'Normal level', live_st_dry: 'Below low-water threshold', live_st_faulty: 'Station fault — no reading',
@@ -73,6 +73,8 @@
       live_near: 'nearby station',
       live_none: 'No BMA telemetry station on this canal.',
       live_more: '+{n} more stations',
+      sec_h: 'Sections by gauge ({n})',
+      list_dup_far: 'outside Bangkok',
       live_halo: 'Above bank threshold now (live)',
       tide_h: 'Tides today · Chao Phraya River',
       tide_high: 'High', tide_low: 'Low', tide_unit: 'm (MSD)',
@@ -139,7 +141,7 @@
       m_unit: 'ม.', km_unit: 'กม.',
       live_h: 'สถานะน้ำปัจจุบัน',
       live_reading: 'อ่านค่าล่าสุด', live_fetched: 'ดึงข้อมูลเมื่อ',
-      live_src: 'ข้อมูลจากสถานีตรวจวัดระดับน้ำของสำนักการระบายน้ำ กทม. (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>) จับคู่เข้ากับเครือข่ายคลอง — จัดสถานะเทียบเกณฑ์ของ กทม. เช่นเดียวกับ <a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a> — เป็น snapshot รีเฟรชด้วย <code>node fetch_live.mjs</code>',
+      live_src: 'ข้อมูลจากสถานีตรวจวัดระดับน้ำของสำนักการระบายน้ำ กทม. (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>) จับคู่เข้ากับเครือข่ายคลอง — จัดสถานะเทียบเกณฑ์ของ กทม. เช่นเดียวกับ <a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a> — เป็น snapshot รีเฟรชด้วย <code>node fetch_live.mjs</code> — คลองที่มีหลายจุดวัดจะแสดงเป็นช่วงตามจุดวัดเมื่อเลือก',
       live_cri: 'วิกฤต', live_war: 'เตือนภัย', live_nor: 'ปกติ', live_dry: 'น้ำต่ำ', live_fau: 'ขัดข้อง',
       live_st_critical: 'น้ำเกินเกณฑ์วิกฤต', live_st_warning: 'น้ำเกินเกณฑ์เตือนภัย',
       live_st_normal: 'ระดับน้ำปกติ', live_st_dry: 'น้ำต่ำกว่าเกณฑ์น้ำต่ำ', live_st_faulty: 'สถานีขัดข้อง — ไม่มีการอ่านค่า',
@@ -148,6 +150,8 @@
       live_near: 'สถานีใกล้คลอง',
       live_none: 'ไม่มีสถานีตรวจวัดของ กทม. บนคลองนี้',
       live_more: '+อีก {n} สถานี',
+      sec_h: 'ช่วงตามจุดวัด ({n} ช่วง)',
+      list_dup_far: 'ต่างจังหวัด',
       live_halo: 'น้ำเกินเกณฑ์ตอนนี้ (สด)',
       tide_h: 'น้ำขึ้น–น้ำลงวันนี้ · เจ้าพระยา',
       tide_high: 'น้ำขึ้น', tide_low: 'น้ำลง', tide_unit: 'ม.รทก.',
@@ -370,6 +374,127 @@
     return riverPt;
   }
 
+  // ---------- canal sections: split a multi-gauge canal into reaches ----------
+  // A canal with several gauges (Saen Saep has 12) is a chain of reaches with
+  // different levels. Everything is keyed by the unique feature key and only
+  // stations attached to that very key are used, so same-named canals in other
+  // provinces can never bleed into each other.
+  const sectionsByCanal = new Map(); // key -> { total, list: [{stations, main, status, fromKm, toKm, line}] }
+  const SEC_RANK = s => (s === 'critical' ? 0 : s === 'warning' ? 1 : s === 'normal' ? 2 : s === 'dry' ? 3 : 4);
+
+  // stitch the feature's MultiLineString parts into one ordered vertex chain
+  // (same trick riverPathDown uses for the river), or null when the parts
+  // never form a single contiguous line
+  function stitchChain(f) {
+    const parts = f.geometry.coordinates.filter(l => l.length >= 2);
+    if (!parts.length) return null;
+    const TOL = 3.5e-4; // ~39 m in degrees — matches the build's 30 m clustering
+    const touch = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < TOL;
+    const chain = [...parts[0]];
+    const pool = parts.slice(1);
+    for (let progress = true; pool.length && progress;) {
+      progress = false;
+      for (let i = 0; i < pool.length; i++) {
+        const line = pool[i], head = line[0], tail = line[line.length - 1];
+        if (touch(chain[chain.length - 1], head)) chain.push(...line.slice(1));
+        else if (touch(chain[chain.length - 1], tail)) chain.push(...line.slice(0, -1).reverse());
+        else if (touch(chain[0], tail)) chain.unshift(...line.slice(0, -1));
+        else if (touch(chain[0], head)) chain.unshift(...line.slice(1).reverse());
+        else continue;
+        pool.splice(i, 1);
+        progress = true;
+        break;
+      }
+    }
+    return pool.length ? null : chain;
+  }
+
+  // along-chain position (km) of a [lat,lng] point — nearest segment + interpolation
+  function chainageOf(chain, cum, lat, lng) {
+    const KX = 111320 * Math.cos(lat * Math.PI / 180), KY = 110570;
+    let best = Infinity, km = 0;
+    for (let i = 1; i < chain.length; i++) {
+      const ax = (chain[i - 1][0] - lng) * KX, ay = (chain[i - 1][1] - lat) * KY;
+      const bx = (chain[i][0] - lng) * KX, by = (chain[i][1] - lat) * KY;
+      const dx = bx - ax, dy = by - ay;
+      const L2 = dx * dx + dy * dy;
+      let s = L2 ? (-ax * dx - ay * dy) / L2 : 0;
+      s = Math.max(0, Math.min(1, s));
+      const d = Math.hypot(ax + dx * s, ay + dy * s);
+      if (d < best) { best = d; km = cum[i - 1] + (cum[i] - cum[i - 1]) * s; }
+    }
+    return km;
+  }
+
+  // sub-chain ([lon,lat]) between two along-chain distances
+  function sliceChain(chain, cum, fromKm, toKm) {
+    const total = cum[cum.length - 1];
+    const at = k => {
+      let i = 1;
+      while (i < cum.length - 1 && cum[i] < k) i++;
+      const t = (k - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1e-9);
+      const p = chain[i - 1], q = chain[i];
+      return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+    };
+    if (toKm - fromKm < 1e-9) return [];
+    const out = [at(fromKm)];
+    for (let i = 0; i < chain.length; i++)
+      if (cum[i] > fromKm && cum[i] < toKm) out.push(chain[i]);
+    out.push(at(toKm));
+    return out;
+  }
+
+  function buildSections(key) {
+    const f = keyToFeature.get(key);
+    const lv = liveByCanal[key];
+    if (!f || !lv || !lv.stations || lv.stations.length < 2) return;
+    const chain = stitchChain(f);
+    if (!chain || chain.length < 2) return;
+    const cum = [0];
+    for (let i = 1; i < chain.length; i++) cum.push(cum[i - 1] + hav(chain[i - 1], chain[i]));
+    const total = cum[cum.length - 1];
+    if (total < 0.5) return; // too short to be worth splitting
+    const placed = lv.stations
+      .map(c => stationByCode.get(c))
+      .filter(s => s && s.lat != null && s.lon != null)
+      .map(s => ({ s, km: chainageOf(chain, cum, s.lat, s.lon) }))
+      .sort((a, b) => a.km - b.km);
+    if (placed.length < 2) return;
+    // group gauges sitting within ~300 m of each other into one section
+    const groups = [];
+    for (const p of placed) {
+      const g = groups[groups.length - 1];
+      if (g && p.km - g.km < 0.3) {
+        g.km = (g.km * g.stations.length + p.km) / (g.stations.length + 1);
+        g.stations.push(p.s);
+        if (SEC_RANK(p.s.status) < SEC_RANK(g.status) ||
+            (p.s.status === g.status && (p.s.level ?? -Infinity) > (g.main.level ?? -Infinity))) {
+          g.status = p.s.status;
+          g.main = p.s;
+        }
+      } else {
+        groups.push({ km: p.km, stations: [p.s], status: p.s.status, main: p.s });
+      }
+    }
+    if (groups.length < 2) return; // every gauge clusters at one spot
+    const bounds = [0];
+    for (let i = 1; i < groups.length; i++) bounds.push((groups[i - 1].km + groups[i].km) / 2);
+    bounds.push(total);
+    const list = [];
+    for (let i = 0; i < groups.length; i++) {
+      const line = sliceChain(chain, cum, bounds[i], bounds[i + 1]);
+      if (line.length < 2) continue;
+      list.push({ stations: groups[i].stations, main: groups[i].main, status: groups[i].status,
+        fromKm: bounds[i], toKm: bounds[i + 1], line });
+    }
+    if (list.length >= 2) sectionsByCanal.set(key, { total, list });
+  }
+  // precompute once at load — only canals with 2+ gauges get split reaches
+  for (const f of canals) {
+    const key = f.properties.key || f.properties.name;
+    if ((liveByCanal[key]?.stations?.length || 0) >= 2) buildSections(key);
+  }
+
   function computeTrace(startKey) {
     if (riverSet.has(startKey)) {
       const riverPt = riverEndpoint(startKey);
@@ -511,13 +636,16 @@
 
     const { pathKeys } = trace;
     for (let i = 0; i < pathKeys.length; i++) {
-      const f = keyToFeature.get(pathKeys[i]);
+      const key = pathKeys[i];
+      const f = keyToFeature.get(key);
       if (!f) continue;
       // downstream junction in [lon, lat] for orientLine (riverPt is stored [lat, lng])
       const downstream = i + 1 < pathKeys.length ? linkPt(pathKeys[i], pathKeys[i + 1])
         : (trace.riverPt ? [trace.riverPt[1], trace.riverPt[0]] : null);
       const isStart = i === 0;
       const color = displayColor(f.properties);
+      const secs = isStart ? sectionsByCanal.get(key) : null;
+      if (secs) { drawStartSections(key, secs, downstream); continue; }
       for (const line of f.geometry.coordinates) {
         const oriented = orientLine(line, downstream);
         const ll = toLatLngs([oriented])[0];
@@ -557,6 +685,50 @@
       L.circleMarker(trace.mouth, {
         radius: 6, color: '#ffffff', weight: 2.5, fillColor: '#26c6da', fillOpacity: 1,
       }).addTo(traceLayer).bindTooltip(t('sea_tip'), { className: 'canal-tip sea-tip', direction: 'top', permanent: true, offset: [0, -10] });
+    }
+  }
+
+  // the selected canal carries several gauges: draw it reach by reach, each in
+  // its own gauge's colour, with a clickable dot at every gauge
+  function drawStartSections(key, secs, downstream) {
+    for (const sec of secs.list) {
+      const ll = toLatLngs([orientLine(sec.line, downstream)])[0];
+      L.polyline(ll, { color: '#ffffff', weight: 10, opacity: 0.95, interactive: false }).addTo(traceLayer);
+      L.polyline(ll, { color: LIVE_COLOR[sec.status] || NO_DATA_COLOR, weight: 6, opacity: 1, interactive: false }).addTo(traceLayer);
+      L.polyline(ll, { color: '#ffffff', weight: 2.2, opacity: 0.9, className: 'flow-dash', interactive: false }).addTo(traceLayer);
+      addFlowArrows(ll);
+    }
+    secs.list.forEach((sec, si) => {
+      for (const s of sec.stations) {
+        if (s.lat == null || s.lon == null) continue;
+        const lvl = s.level != null ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short');
+        L.circleMarker([s.lat, s.lon], {
+          radius: 4.5, color: '#ffffff', weight: 1.6,
+          fillColor: LIVE_COLOR[s.status] || NO_DATA_COLOR, fillOpacity: 1,
+          bubblingMouseEvents: false, // a gauge click must not clear the selection
+        }).addTo(traceLayer)
+          .bindTooltip(`${stationName(s)} — ${lvl}`, { className: 'canal-tip', direction: 'top' })
+          .on('click', () => focusSection(key, si));
+      }
+    });
+  }
+
+  // zoom to one reach of the selected canal (from a panel row or a gauge dot)
+  function focusSection(key, idx) {
+    const secs = sectionsByCanal.get(key);
+    if (!secs || !secs.list[idx]) return;
+    const sec = secs.list[idx];
+    const ll = toLatLngs([sec.line])[0];
+    map.flyToBounds(L.latLngBounds(ll).pad(0.2), { maxZoom: 15, duration: 0.8 });
+    const flash = L.polyline(ll, {
+      color: '#ffffff', weight: 12, opacity: 0.85, className: 'sec-flash', interactive: false,
+    }).addTo(traceLayer);
+    setTimeout(() => traceLayer.removeLayer(flash), 1000);
+    const row = panelBody.querySelector(`.sec-row[data-sec="${idx}"]`);
+    if (row) {
+      panelBody.querySelectorAll('.sec-row.active').forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+      row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }
 
@@ -696,9 +868,11 @@
       }
       const lvHere = liveByCanal[key];
       const lvTitle = lvHere ? ` title="${t('live_st_' + lvHere.status)}"` : '';
+      const hint = areaHint(p);
+      const hintHtml = hint ? ` <span class="dup-hint">${hint.far ? t('list_dup_far') : esc(hint.district)}</span>` : '';
       return `<li class="loc-item" data-key="${esc(key)}">` +
         `<div class="row1"><span class="chip" style="background:${displayColor(p)}"${lvTitle}></span>` +
-        `<span class="name">${displayName(p)}${sec ? ` <span class="thai">${sec}</span>` : ''}</span>` +
+        `<span class="name">${displayName(p)}${sec ? ` <span class="thai">${sec}</span>` : ''}${hintHtml}</span>` +
         `<span class="dist">${fmtDist(it.d)}</span></div>` +
         `<div class="conns"><span class="conn-label">${t('loc_conn')}:</span> ${connHtml}</div></li>`;
     }).join('');
@@ -751,20 +925,39 @@
     if (!LIVE) return '';
     const lv = liveByCanal[p.key];
     if (!lv) return `<div class="pop-live none">${t('live_none')}</div>`;
-    const sts = lv.stations.map(c => stationByCode.get(c)).filter(Boolean);
-    const shown = sts.slice(0, 4);
-    const stationLine = s =>
-      `${esc(stationName(s))} — ` +
-      (s.level != null ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short')) +
-      (s.match === 'near' ? ` <span class="st-near">(${t('live_near')})</span>` : '');
-    return `<div class="pop-live" style="border-left-color:${LIVE_COLOR[lv.status]}">` +
+    const head =
       `<div class="live-head"><span class="live-dot" style="background:${LIVE_COLOR[lv.status]}"></span>${t('live_st_' + lv.status)}</div>` +
       (lv.level != null
         ? `<div class="live-levels">${t('live_level')}: <b>${lv.level.toFixed(2)}</b> ${t('live_unit')}` +
           (lv.warning != null ? ` · ${t('live_warn')} ${lv.warning}` : '') +
           (lv.critical != null ? ` · ${t('live_crit')} ${lv.critical}` : '') +
           (lv.dry != null ? ` · ${t('live_low')} ${lv.dry}` : '') + `</div>`
-        : '') +
+        : '');
+    const secs = sectionsByCanal.get(p.key);
+    if (secs) { // multi-gauge canal: one row per reach instead of a raw station dump
+      const rows = secs.list.map((sec, i) => {
+        const color = LIVE_COLOR[sec.status] || NO_DATA_COLOR;
+        const lvl = sec.main.level != null
+          ? `${sec.main.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short');
+        const extra = sec.stations.length > 1
+          ? ` <span class="sec-more" title="${esc(sec.stations.slice(1).map(stationName).join(' · '))}">+${sec.stations.length - 1}</span>` : '';
+        return `<button class="sec-row" data-sec="${i}" title="${esc(t('live_st_' + sec.status))}">` +
+          `<span class="live-dot" style="background:${color}"></span>` +
+          `<span class="sec-km">${sec.fromKm.toFixed(1)}–${sec.toKm.toFixed(1)} ${t('km_unit')}</span>` +
+          `<span class="sec-name">${esc(stationName(sec.main))}${extra}</span>` +
+          `<span class="sec-lvl" style="color:${color}">${lvl}</span></button>`;
+      }).join('');
+      return `<div class="pop-live" style="border-left-color:${LIVE_COLOR[lv.status]}">` + head +
+        `<div class="sec-list"><div class="sec-label">${t('sec_h').replace('{n}', secs.list.length)}</div>${rows}</div>` +
+        `<div class="pop-meta">${t('live_reading')}: ${fmtBangkok(lv.ts)}</div></div>`;
+    }
+    const sts = lv.stations.map(c => stationByCode.get(c)).filter(Boolean);
+    const shown = sts.slice(0, 4);
+    const stationLine = s =>
+      `${esc(stationName(s))} — ` +
+      (s.level != null ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short')) +
+      (s.match === 'near' ? ` <span class="st-near">(${t('live_near')})</span>` : '');
+    return `<div class="pop-live" style="border-left-color:${LIVE_COLOR[lv.status]}">` + head +
       (shown.length
         ? `<div class="live-stations">${shown.map(stationLine).join('<br>')}` +
           (sts.length > shown.length ? `<br>${t('live_more').replace('{n}', sts.length - shown.length)}` : '') + `</div>`
@@ -1083,12 +1276,17 @@
     }
   });
 
-  // panel clicks: canal rows / connection chips / nearby structures
+  // panel clicks: canal rows / connection chips / nearby structures / sections
   panelBody.addEventListener('click', e => {
     const conn = e.target.closest('.conn-link');
     if (conn) {
       const f = keyToFeature.get(conn.dataset.key);
       if (f) focusCanal(f);
+      return;
+    }
+    const secRow = e.target.closest('.sec-row');
+    if (secRow && trace) {
+      focusSection(trace.startKey, +secRow.dataset.sec);
       return;
     }
     const st = e.target.closest('.loc-struct');
@@ -1106,9 +1304,15 @@
 
   // ---------- stats ----------
   const totalKm = canals.reduce((a, f) => a + f.properties.length_km, 0);
-  const critKm = canals
-    .filter(f => liveByCanal[f.properties.key]?.status === 'critical')
-    .reduce((a, f) => a + f.properties.length_km, 0);
+  // multi-gauge canals count only the reaches that are actually critical
+  const critKm = canals.reduce((a, f) => {
+    const key = f.properties.key || f.properties.name;
+    const secs = sectionsByCanal.get(key);
+    if (secs) return a + secs.list
+      .filter(s => s.status === 'critical')
+      .reduce((x, s) => x + (s.toKm - s.fromKm), 0);
+    return liveByCanal[key]?.status === 'critical' ? a + f.properties.length_km : a;
+  }, 0);
   function renderStats() {
     document.getElementById('stats').innerHTML =
       `<div class="stat"><b>${canals.length}</b><span>${t('stats_canals')}</span></div>` +
@@ -1165,6 +1369,36 @@
   const listEl = document.getElementById('canal-list');
   const byLength = [...canals].sort((a, b) => b.properties.length_km - a.properties.length_km);
 
+  // same-named canals in different places (คลองด่าน exists twice, คลองหนึ่ง seven
+  // times…) — annotate list rows with the district of the canal's own gauges,
+  // the district of the nearest gauge, or "outside Bangkok"
+  const dupHint = new Map(); // key -> '' (unique name) | { district } | { far: true }
+  function areaHint(p) {
+    const key = p.key || p.name;
+    if (dupHint.has(key)) return dupHint.get(key);
+    let hint = '';
+    const nmTh = p.name_th || p.name, nmEn = p.name;
+    if (canals.some(o => {
+      const q = o.properties;
+      return (q.key || q.name) !== key && ((q.name_th || q.name) === nmTh || q.name === nmEn);
+    })) {
+      const sts = (liveByCanal[key]?.stations || []).map(c => stationByCode.get(c)).filter(Boolean);
+      if (sts.length && sts[0].district) hint = { district: sts[0].district };
+      else {
+        const f = keyToFeature.get(key);
+        let best = Infinity, district = null;
+        for (const s of LIVE ? LIVE.stations : []) {
+          if (s.lat == null || s.lon == null || !s.district) continue;
+          const hit = nearestOnCanal(f, s.lat, s.lon);
+          if (hit.d < best) { best = hit.d; district = s.district; }
+        }
+        hint = district && best <= 2000 ? { district } : { far: true };
+      }
+    }
+    dupHint.set(key, hint);
+    return hint;
+  }
+
   function focusCanal(f) {
     const key = f.properties.key || f.properties.name;
     selectCanal(key);
@@ -1202,9 +1436,11 @@
       const secondary = subName(p);
       const lv = liveByCanal[p.key];
       const lvTitle = lv ? ` title="${t('live_st_' + lv.status)}"` : '';
+      const hint = areaHint(p);
+      const hintHtml = hint ? ` <span class="dup-hint">${hint.far ? t('list_dup_far') : esc(hint.district)}</span>` : '';
       const li = document.createElement('li');
       li.innerHTML = `<span class="chip" style="background:${displayColor(p)}"${lvTitle}></span>` +
-        `<span class="name">${displayName(p)}${secondary ? ` <span class="thai">${secondary}</span>` : ''}</span>` +
+        `<span class="name">${displayName(p)}${secondary ? ` <span class="thai">${secondary}</span>` : ''}${hintHtml}</span>` +
         `<span class="km">${p.length_km} km</span>`;
       li.addEventListener('click', () => focusCanal(f));
       listEl.appendChild(li);
