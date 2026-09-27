@@ -46,9 +46,9 @@ only the basemap tiles need internet.)
   and every detail panel repeats the reading time of that canal's stations.
   Refresh with `node fetch_live.mjs` (see *Rebuilding the data*). The detail
   panel shows the canal's current status as a badge (critical, warning or
-  normal) and no longer shows a static historical-risk badge; the selected
-  canal keeps its live colour in the trace instead of its historical risk
-  colour.
+  normal) and no longer shows a static historical-risk badge; the highlighted
+  route is coloured by each canal's current status, with static risk
+  remaining only where no station reports.
 - **Live-situation glow** — canals whose stations currently read above their
   bank thresholds glow underneath their risk colour (bright red = critical,
   orange = warning), with a sidebar filter to toggle it. This separates the
