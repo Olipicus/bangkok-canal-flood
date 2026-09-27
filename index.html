@@ -91,7 +91,10 @@
 
 <aside id="detail-panel">
   <header>
-    <h2 data-i18n="details"></h2>
+    <h2 id="detail-title" data-i18n="details"></h2>
+    <button id="detail-collapse" type="button" aria-expanded="true" aria-controls="detail-body" title="หุบแผงข้อมูล">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
     <button id="detail-close" type="button" title="ล้างการเลือกและปิด">✕</button>
   </header>
   <div id="detail-body"></div>
@@ -100,6 +103,7 @@
 <script src="vendor/leaflet.js"></script>
 <script src="data/canals_data.js"></script>
 <script src="data/live_status.js"></script>
+<script src="data/flood69.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

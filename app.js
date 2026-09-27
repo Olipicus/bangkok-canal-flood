@@ -23,6 +23,7 @@
       chip: 'Drainage path to the sea shown — click another canal, empty map, or press Esc to clear',
       chip_sea: '🌊 to the sea', chip_sea_title: 'Fly to the river mouth',
       details: 'Details', detail_close_title: 'Clear selection and close',
+      detail_collapse: 'Collapse panel', detail_expand: 'Expand panel',
       toggle_panel: 'Toggle panel',
       stats_canals: 'canals', stats_km: 'km total', stats_km_high: 'km high-risk', stats_structs: 'gates / pumps',
       risk_badge_3: 'High risk', risk_badge_2: 'Medium risk', risk_badge_1: 'Low risk',
@@ -72,6 +73,9 @@
       live_near: 'nearby station',
       live_none: 'No BMA telemetry station on this canal.',
       live_more: '+{n} more stations',
+      tide_h: 'Tides today · Chao Phraya River',
+      tide_high: 'High', tide_low: 'Low', tide_unit: 'm (MSD)',
+      tide_src: `Tide prediction from the BMA Drainage and Sewerage Department, fetched via the People's Party flood portal (<a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>).`,
       sidebar_close_title: 'Close panel',
     },
     th: {
@@ -93,6 +97,7 @@
       chip: 'กำลังแสดงเส้นทางระบายน้ำสู่ทะเล — คลิกคลองอื่น คลิกพื้นที่ว่าง หรือกด Esc เพื่อล้าง',
       chip_sea: '🌊 ไปทางออกทะเล', chip_sea_title: 'บินไปยังปากแม่น้ำ',
       details: 'รายละเอียด', detail_close_title: 'ล้างการเลือกและปิด',
+      detail_collapse: 'หุบแผงข้อมูล', detail_expand: 'กางแผงข้อมูล',
       toggle_panel: 'สลับแผงข้อมูล',
       stats_canals: 'คลอง', stats_km: 'กม. รวม', stats_km_high: 'กม. เสี่ยงสูง', stats_structs: 'ประตูน้ำ/ปั๊ม',
       risk_badge_3: 'ความเสี่ยงสูง', risk_badge_2: 'ความเสี่ยงกลาง', risk_badge_1: 'ความเสี่ยงต่ำ',
@@ -142,6 +147,9 @@
       live_near: 'สถานีใกล้คลอง',
       live_none: 'ไม่มีสถานีตรวจวัดของ กทม. บนคลองนี้',
       live_more: '+อีก {n} สถานี',
+      tide_h: 'น้ำขึ้น–น้ำลงวันนี้ · เจ้าพระยา',
+      tide_high: 'น้ำขึ้น', tide_low: 'น้ำลง', tide_unit: 'ม.รทก.',
+      tide_src: 'พยากรณ์น้ำขึ้น-น้ำลงจากสำนักการระบายน้ำ กทม. ดึงผ่านเว็บติดตามน้ำท่วมของพรรคประชาชน (<a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>)',
       sidebar_close_title: 'ปิดแผงข้อมูล',
     },
   };
@@ -162,6 +170,8 @@
 
   // ---------- live water-level snapshot (BMA telemetry, refreshed via fetch_live.mjs) ----------
   const LIVE = window.LIVE_STATUS || null;
+  // ---------- tide prediction (BMA via flood69.peoplesparty.or.th, refreshed via fetch_flood69.mjs) ----------
+  const TIDE = window.FLOOD69_STATUS || null;
   const LIVE_COLOR = { critical: '#e53935', warning: '#fb8c00', normal: '#43a047', faulty: '#9e9e9e' };
   const stationByCode = new Map((LIVE ? LIVE.stations : []).map(s => [s.code, s]));
   const liveByCanal = LIVE ? LIVE.canals : {};
@@ -173,6 +183,9 @@
       hour: '2-digit', minute: '2-digit',
     });
   }
+  const fmtClock = ms => new Date(ms).toLocaleString(lang === 'th' ? 'th-TH' : 'en-GB', {
+    timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit',
+  });
 
   // ---------- map ----------
   // phones: pinch/double-tap zooms, so skip the zoom buttons (they would
@@ -838,6 +851,8 @@
   function showDetail(html, render) {
     currentDetailRender = render || null;
     panelBody.innerHTML = html;
+    updatePanelTitle();
+    setSheetCollapsed(false); // a fresh result always opens expanded
     panel.classList.add('open');
     document.body.classList.add('detail-open'); // shrink the map to make room
     resizeAfterPanel();
@@ -845,10 +860,84 @@
   function hideDetail() {
     if (!panel.classList.contains('open')) return;
     panel.classList.remove('open');
+    setSheetCollapsed(false);
     document.body.classList.remove('detail-open');
     currentDetailRender = null;
     resizeAfterPanel();
   }
+
+  // ---------- bottom-sheet collapse (tablet/phone) ----------
+  // The sheet folds down to a slim title bar so the map and the route lines
+  // stay visible: drag the header, tap it, or use the chevron button.
+  const isSheet = () => window.matchMedia('(max-width: 1023px)').matches;
+  const panelHead = panel.querySelector('header');
+  const panelTitle = document.getElementById('detail-title');
+  const collapseBtn = document.getElementById('detail-collapse');
+  function updatePanelTitle() {
+    const title = panelBody.querySelector('.pop-title');
+    panelTitle.innerHTML = title ? title.innerHTML : t('details');
+  }
+  function setSheetCollapsed(collapsed) {
+    panel.classList.toggle('collapsed', collapsed);
+    panelBody.setAttribute('aria-hidden', String(collapsed));
+    collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+    collapseBtn.title = collapsed ? t('detail_expand') : t('detail_collapse');
+  }
+  function syncSheetPeek() { // keep the CSS snap point at the real header height
+    if (isSheet()) panel.style.setProperty('--sheet-peek', panelHead.offsetHeight + 'px');
+  }
+  syncSheetPeek();
+  collapseBtn.addEventListener('click', () => setSheetCollapsed(!panel.classList.contains('collapsed')));
+
+  let sheetDrag = null, sheetClickSuppress = false;
+  panelHead.addEventListener('pointerdown', e => {
+    if (!isSheet() || !panel.classList.contains('open')) return;
+    if (e.target.closest('button')) return; // the buttons keep their own clicks
+    sheetClickSuppress = false;
+    sheetDrag = {
+      startY: e.clientY,
+      base: panel.classList.contains('collapsed') ? panel.offsetHeight - panelHead.offsetHeight : 0,
+      moved: false, lastY: e.clientY, lastT: e.timeStamp, v: 0,
+    };
+    panel.classList.add('dragging');
+    panelHead.setPointerCapture(e.pointerId);
+  });
+  panelHead.addEventListener('pointermove', e => {
+    if (!sheetDrag) return;
+    const dy = e.clientY - sheetDrag.startY;
+    if (Math.abs(dy) > 5) sheetDrag.moved = true;
+    const dt = e.timeStamp - sheetDrag.lastT;
+    if (dt > 0) sheetDrag.v = sheetDrag.v * 0.8 + ((e.clientY - sheetDrag.lastY) / dt) * 0.2;
+    sheetDrag.lastY = e.clientY; sheetDrag.lastT = e.timeStamp;
+    const max = panel.offsetHeight - panelHead.offsetHeight;
+    const off = Math.max(0, Math.min(max, sheetDrag.base + dy));
+    panel.style.transform = `translateY(${off}px)`;
+  });
+  panelHead.addEventListener('pointerup', e => {
+    if (!sheetDrag) return;
+    const d = sheetDrag;
+    sheetDrag = null;
+    panel.classList.remove('dragging');
+    if (!d.moved) { panel.style.transform = ''; return; } // a tap — the click handler toggles
+    const max = panel.offsetHeight - panelHead.offsetHeight;
+    const off = Math.max(0, Math.min(max, d.base + (e.clientY - d.startY)));
+    const collapsed = d.v > 0.45 ? true : d.v < -0.45 ? false : off > max / 2; // flick wins over position
+    sheetClickSuppress = true; // the release must not also register as a tap
+    panel.style.transform = '';
+    setSheetCollapsed(collapsed);
+  });
+  panelHead.addEventListener('pointercancel', () => {
+    if (!sheetDrag) return;
+    sheetDrag = null;
+    panel.classList.remove('dragging');
+    panel.style.transform = '';
+  });
+  panelHead.addEventListener('click', e => {
+    if (sheetClickSuppress) { sheetClickSuppress = false; return; }
+    if (!isSheet() || !panel.classList.contains('open')) return;
+    if (e.target.closest('button')) return;
+    setSheetCollapsed(!panel.classList.contains('collapsed'));
+  });
 
   function selectCanal(key) {
     // the dropped pin stays on the map — the trace just takes over highlighting
@@ -981,6 +1070,19 @@
   }
 
   // ---------- live status panel ----------
+  function tideHtml() {
+    if (!TIDE || !TIDE.tide) return '';
+    // highlight the next tide still to come — high tide is when canals drain worst
+    const nextAt = TIDE.tide.events.find(e => e.at > Date.now())?.at ?? null;
+    const rows = TIDE.tide.events.map(e =>
+      `<div class="tide-row${e.at === nextAt ? ' next' : ''}">` +
+      `<span class="tide-time">${fmtClock(e.at)}</span>` +
+      `<span class="tide-chip ${e.type}">${t(e.type === 'high' ? 'tide_high' : 'tide_low')}</span>` +
+      `<span class="tide-level"><b>${e.level.toFixed(2)}</b> ${t('tide_unit')}</span></div>`).join('');
+    return `<div class="tide-block"><div class="tide-head">${t('tide_h')}</div>${rows}` +
+      `<div class="live-src">${t('tide_src')}</div></div>`;
+  }
+
   function renderLive() {
     const el = document.getElementById('live-panel');
     if (!LIVE) { el.classList.add('hidden'); return; }
@@ -993,6 +1095,7 @@
       `<span class="lbl">${t('live_fetched')}:</span> ${fmtBangkok(LIVE.fetched_at)}</div>` +
       `<div class="live-counts">${chips.map(([k, n, lbl]) =>
         `<span class="live-count" title="${t('live_st_' + k)}"><i style="background:${LIVE_COLOR[k]}"></i>${lbl} ${n ?? 0}</span>`).join('')}</div>` +
+      tideHtml() +
       `<div class="live-src">${t('live_src')}</div>`;
   }
 
@@ -1081,7 +1184,8 @@
     for (const { s, m } of structMarkers) m.setTooltipContent(displayName(s));
     if (trace) drawTrace(); // rebuild river/sea tooltips in the new language
     if (loc) chipLoc.textContent = t('loc_chip');
-    if (currentDetailRender) panelBody.innerHTML = currentDetailRender();
+    if (currentDetailRender) { panelBody.innerHTML = currentDetailRender(); updatePanelTitle(); }
+    setSheetCollapsed(panel.classList.contains('collapsed')); // refresh the button title/aria
   }
   function setLang(l) {
     if (l === lang) return;
@@ -1108,5 +1212,5 @@
   function closeDrawerOnMobile() {
     if (isPhone()) setDrawerOpen(false);
   }
-  window.addEventListener('resize', () => map.invalidateSize());
+  window.addEventListener('resize', () => { map.invalidateSize(); syncSheetPeek(); });
 })();

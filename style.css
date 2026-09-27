@@ -169,16 +169,22 @@ footer { font-size: 11px; line-height: 1.55; color: var(--muted); border-bottom:
 }
 #detail-panel.open { transform: translateX(0); visibility: visible; }
 #detail-panel header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
 }
-#detail-panel h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
-#detail-close, #help-close {
+#detail-panel h2 {
+  margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
+  flex: 1 1 auto; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#detail-close, #detail-collapse, #help-close {
   background: var(--panel-2); color: var(--text); cursor: pointer;
   border: 1px solid var(--border); border-radius: 6px;
   width: 32px; height: 32px; font-size: 14px; line-height: 1;
 }
-#detail-close:hover, #help-close:hover { border-color: var(--accent); color: var(--accent); }
+#detail-close:hover, #detail-collapse:hover, #help-close:hover { border-color: var(--accent); color: var(--accent); }
+/* chevron is a sheet-only control (desktop uses the side panel instead) */
+#detail-collapse { display: none; align-items: center; justify-content: center; padding: 0; }
 #detail-body { padding: 14px 18px 18px; }
 
 body.detail-open #map { inset: 0 var(--detail-w) 0 var(--sidebar-w); }
@@ -372,6 +378,21 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
 .live-count i { width: 8px; height: 8px; border-radius: 50%; }
 .live-src { font-size: 11px; line-height: 1.55; color: var(--muted); }
 .live-src code { font-size: 10.5px; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+
+/* ---------- Chao Phraya tide prediction (flood69 feed) ---------- */
+.tide-block { margin: 11px 0 9px; padding-top: 10px; border-top: 1px solid var(--border); }
+.tide-head { font-weight: 600; font-size: 13px; margin-bottom: 5px; }
+.tide-row { display: flex; align-items: baseline; gap: 9px; font-size: 12.5px; line-height: 1.8; }
+.tide-row.next .tide-level b { color: var(--accent); }
+.tide-row.next .tide-time::after { content: ' ◂'; color: var(--accent); }
+.tide-time { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 46px; }
+.tide-chip {
+  font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 20px;
+  white-space: nowrap;
+}
+.tide-chip.high { background: rgba(79, 195, 247, 0.16); color: var(--accent); }
+.tide-chip.low { background: var(--panel-2); color: var(--muted); }
+.tide-level { font-variant-numeric: tabular-nums; }
 .pop-live {
   margin: 10px 0 2px; padding: 9px 11px; font-size: 12.5px;
   border-left: 3px solid var(--accent); background: var(--panel-2); border-radius: 0 7px 7px 0;
@@ -393,7 +414,7 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
    detail results slide up as a bottom sheet over the map
    ========================================================= */
 @media (max-width: 1023px) {
-  :root { --sidebar-w: 320px; }
+  :root { --sidebar-w: 320px; --sheet-peek: 69px; }
 
   #detail-panel {
     top: auto; left: 0; right: 0; bottom: 0;
@@ -411,11 +432,24 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
     position: sticky; top: 0; z-index: 1;
     background: var(--panel);
     padding-top: 24px;
+    /* the whole header doubles as the sheet's drag surface */
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none; cursor: grab;
   }
   #detail-panel header::before {
     content: ''; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
     width: 44px; height: 4px; border-radius: 2px; background: var(--border);
   }
+  #detail-panel.dragging { transition: none; }
+  #detail-panel.dragging header { cursor: grabbing; }
+
+  /* collapsed: the sheet folds down to a slim title bar so the map and the
+     route lines stay visible — drag the header down, tap it, or the chevron */
+  #detail-collapse { display: flex; }
+  #detail-collapse svg { transition: transform 0.25s ease; }
+  #detail-panel.collapsed #detail-collapse svg { transform: rotate(180deg); }
+  #detail-panel.open.collapsed { transform: translateY(calc(100% - var(--sheet-peek))); }
+  #detail-panel.collapsed #detail-body { visibility: hidden; }
   #detail-body { padding: 12px 18px 20px; }
 
   /* the sheet overlays the map — never shrink it */
