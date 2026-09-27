@@ -128,8 +128,9 @@ previous snapshot; the sidebar always shows how old it is.
 Under the hood this runs:
 
 ```bash
-node build_data.mjs   # OSM geometry → data/canals_data.js
-node fetch_live.mjs   # BMA telemetry → data/live_status.js (the site's live layer + timestamps)
+node build_data.mjs    # OSM geometry → data/canals_data.js
+node fetch_live.mjs    # BMA telemetry → data/live_status.js (the site's live layer + timestamps)
+node fetch_flood69.mjs # BMA tides via flood69 → data/flood69.js (sidebar tide block)
 ```
 
 `build_data.mjs` merges OSM way segments into named canals, simplifies lines
@@ -143,3 +144,13 @@ why the site ships a generated snapshot instead of fetching live), maps the
 stations onto the canal network, and writes `data/live_status.js`. Re-run it
 whenever you want fresher readings — the sidebar always shows how old the
 snapshot is.
+
+`fetch_flood69.mjs` adds today's Chao Phraya tide prediction (two high / two
+low tides, m MSD) to the sidebar. It reads the People's Party flood portal
+(`flood69.peoplesparty.or.th/api/klongmap`, with the portal's own static
+snapshot as fallback) — a 5-minute-cache mirror of BMA's KlongMap schematic
+(`weather.bangkok.go.th/KlongMap`). The mirror carries no station coordinates,
+so it can't feed the canal map; only the `dailyheightwater` tide table is
+used. A failure there doesn't abort the update — the site just keeps showing
+the previous tide snapshot. Don't run it more often than needed: the portal
+caches upstream precisely to spare BMA's system.
