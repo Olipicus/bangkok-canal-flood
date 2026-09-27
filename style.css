@@ -224,6 +224,8 @@ body.detail-open.collapsed #trace-chip { left: calc((100% - var(--detail-w)) / 2
 }
 .pop-path .chain { font-size: 12.5px; line-height: 1.6; color: #d7e6f5; }
 .pop-path .arrow { color: var(--accent); font-weight: 700; padding: 0 2px; }
+/* divider between stacked canal sections when several canals are selected */
+.sel-sep { border: 0; border-top: 1px dashed var(--border); margin: 13px 0; }
 
 /* ---------- trace ---------- */
 #trace-chip {

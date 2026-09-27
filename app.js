@@ -20,7 +20,8 @@
       structs: 'Gates &amp; pumping stations',
       search_ph: 'Search canal… e.g. Saen Saep / แสนแสบ',
       footer: `Canal geometry © OpenStreetMap contributors. Water status (critical / warning / normal / low water) is computed from live BMA drainage-telemetry readings against BMA's own thresholds — the same levels shown on flood69.peoplesparty.or.th — at the snapshot time shown; canals without a station stay grey. For actual alerts, follow BMA / Thai Government channels.`,
-      chip: 'Drainage path to the sea shown — click another canal, empty map, or press Esc to clear',
+      chip: 'Drainage paths to the sea shown — click canals to add or remove them; empty map or Esc clears all',
+      sel_count: '{n} canals selected',
       chip_sea: '🌊 to the sea', chip_sea_title: 'Fly to the river mouth',
       details: 'Details', detail_close_title: 'Clear selection and close',
       detail_collapse: 'Collapse panel', detail_expand: 'Expand panel',
@@ -97,7 +98,8 @@
       structs: 'ประตูน้ำ &amp; สถานีสูบน้ำ',
       search_ph: 'ค้นหาคลอง… เช่น แสนแสบ / Saen Saep',
       footer: 'เรขาคณิตคลอง © OpenStreetMap contributors สถานะน้ำในคลอง (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) คำนวณจากค่าระดับน้ำสดของสำนักการระบายน้ำ กทม. เทียบเกณฑ์ของ กทม. เอง — ระดับเดียวกับที่แสดงบน flood69.peoplesparty.or.th — ตามเวลา snapshot คลองที่ไม่มีสถานีแสดงเป็นสีเทา สำหรับการแจ้งเตือนจริง โปรดติดตามประกาศของ กทม. / หน่วยงานราชการ',
-      chip: 'กำลังแสดงเส้นทางระบายน้ำสู่ทะเล — คลิกคลองอื่น คลิกพื้นที่ว่าง หรือกด Esc เพื่อล้าง',
+      chip: 'กำลังแสดงเส้นทางระบายน้ำสู่ทะเล — คลิกคลองเพื่อเพิ่มหรือเอาออก คลิกพื้นที่ว่าง หรือกด Esc เพื่อล้างทั้งหมด',
+      sel_count: 'เลือกอยู่ {n} คลอง',
       chip_sea: '🌊 ไปทางออกทะเล', chip_sea_title: 'บินไปยังปากแม่น้ำ',
       details: 'รายละเอียด', detail_close_title: 'ล้างการเลือกและปิด',
       detail_collapse: 'หุบแผงข้อมูล', detail_expand: 'กางแผงข้อมูล',
@@ -232,7 +234,11 @@
   const baseLayer = L.layerGroup();
   const featureToLayer = new Map(); // feature -> its polylines (one per reach on multi-gauge canals)
   const traceLayer = L.layerGroup().addTo(map);
-  let trace = null; // { startKey, pathKeys, riverPt }
+  // multi-select: every canal click adds to the selection, each canal keeps its
+  // own computed drainage trace; Esc / empty-map click clears them all
+  let selected = []; // ordered selected canal keys (most recent last)
+  const traceCache = new Map(); // key -> { startKey, pathKeys, riverPt, ... }
+  const lastTrace = () => (selected.length ? traceCache.get(selected[selected.length - 1]) : null);
   const locLayer = L.layerGroup().addTo(map);
   let loc = null; // location-lookup state: { latlng, items, structs, keys, nearestKey, outside }
   let LOC_RADIUS_M = 500; // adjustable via the sidebar select, persisted in localStorage
@@ -627,62 +633,66 @@
   // ---------- trace rendering ----------
   function drawTrace() {
     traceLayer.clearLayers();
-    if (!trace || !trace.reachable) return;
+    const routes = selected.map(k => traceCache.get(k)).filter(tr => tr && tr.reachable);
+    if (!routes.length) return;
 
     // dim the river context, highlight the active outflow route
     for (const line of toLatLngs(window.RIVER_LINES || [])) {
       L.polyline(line, { color: '#3d7fd9', weight: 5, opacity: 0.3, interactive: false }).addTo(traceLayer);
     }
 
-    const { pathKeys } = trace;
-    for (let i = 0; i < pathKeys.length; i++) {
-      const key = pathKeys[i];
-      const f = keyToFeature.get(key);
-      if (!f) continue;
-      // downstream junction in [lon, lat] for orientLine (riverPt is stored [lat, lng])
-      const downstream = i + 1 < pathKeys.length ? linkPt(pathKeys[i], pathKeys[i + 1])
-        : (trace.riverPt ? [trace.riverPt[1], trace.riverPt[0]] : null);
-      const isStart = i === 0;
-      const color = displayColor(f.properties);
-      const secs = sectionsByCanal.get(key);
-      if (secs) { drawTraceSections(key, secs, downstream, isStart); continue; }
-      for (const line of f.geometry.coordinates) {
-        const oriented = orientLine(line, downstream);
-        const ll = toLatLngs([oriented])[0];
-        if (isStart) {
-          L.polyline(ll, { color: '#ffffff', weight: 10, opacity: 0.95, interactive: false }).addTo(traceLayer);
-          L.polyline(ll, { color, weight: 6, opacity: 1, interactive: false }).addTo(traceLayer);
-        } else {
-          L.polyline(ll, { color, weight: 4.5, opacity: 0.95, interactive: false }).addTo(traceLayer);
+    for (const tr of routes) {
+      const { pathKeys } = tr;
+      for (let i = 0; i < pathKeys.length; i++) {
+        const key = pathKeys[i];
+        const f = keyToFeature.get(key);
+        if (!f) continue;
+        // downstream junction in [lon, lat] for orientLine (riverPt is stored [lat, lng])
+        const downstream = i + 1 < pathKeys.length ? linkPt(pathKeys[i], pathKeys[i + 1])
+          : (tr.riverPt ? [tr.riverPt[1], tr.riverPt[0]] : null);
+        const isStart = i === 0;
+        const color = displayColor(f.properties);
+        const secs = sectionsByCanal.get(key);
+        if (secs) { drawTraceSections(key, secs, downstream, isStart); continue; }
+        for (const line of f.geometry.coordinates) {
+          const oriented = orientLine(line, downstream);
+          const ll = toLatLngs([oriented])[0];
+          if (isStart) {
+            L.polyline(ll, { color: '#ffffff', weight: 10, opacity: 0.95, interactive: false }).addTo(traceLayer);
+            L.polyline(ll, { color, weight: 6, opacity: 1, interactive: false }).addTo(traceLayer);
+          } else {
+            L.polyline(ll, { color, weight: 4.5, opacity: 0.95, interactive: false }).addTo(traceLayer);
+          }
+          L.polyline(ll, { color: '#ffffff', weight: 2.2, opacity: 0.9, className: 'flow-dash', interactive: false }).addTo(traceLayer);
+          addFlowArrows(ll);
         }
-        L.polyline(ll, { color: '#ffffff', weight: 2.2, opacity: 0.9, className: 'flow-dash', interactive: false }).addTo(traceLayer);
-        addFlowArrows(ll);
+      }
+
+      // outflow: continue the flow animation down the river to the Gulf
+      if (tr.riverPath) {
+        L.polyline(tr.riverPath, { color: '#3d7fd9', weight: 7, opacity: 1, lineCap: 'round', interactive: false }).addTo(traceLayer);
+        L.polyline(tr.riverPath, { color: '#ffffff', weight: 2.4, opacity: 0.95, className: 'flow-dash', interactive: false }).addTo(traceLayer);
+        addFlowArrows(tr.riverPath, 2600);
+      }
+
+      if (tr.riverPt) {
+        L.circleMarker(tr.riverPt, {
+          radius: 13, color: '#3d7fd9', weight: 2, fill: false, opacity: 0.8,
+          className: 'mouth-pulse', interactive: false,
+        }).addTo(traceLayer);
+        L.circleMarker(tr.riverPt, {
+          radius: 6, color: '#ffffff', weight: 2.5, fillColor: '#3d7fd9', fillOpacity: 1,
+        }).addTo(traceLayer).bindTooltip(t('river_tip'), { className: 'canal-tip', direction: 'top' });
       }
     }
 
-    // outflow: continue the flow animation down the river to the Gulf
-    if (trace.riverPath) {
-      L.polyline(trace.riverPath, { color: '#3d7fd9', weight: 7, opacity: 1, lineCap: 'round', interactive: false }).addTo(traceLayer);
-      L.polyline(trace.riverPath, { color: '#ffffff', weight: 2.4, opacity: 0.95, className: 'flow-dash', interactive: false }).addTo(traceLayer);
-      addFlowArrows(trace.riverPath, 2600);
-    }
-
-    if (trace.riverPt) {
-      L.circleMarker(trace.riverPt, {
-        radius: 13, color: '#3d7fd9', weight: 2, fill: false, opacity: 0.8,
-        className: 'mouth-pulse', interactive: false,
-      }).addTo(traceLayer);
-      L.circleMarker(trace.riverPt, {
-        radius: 6, color: '#ffffff', weight: 2.5, fillColor: '#3d7fd9', fillOpacity: 1,
-      }).addTo(traceLayer).bindTooltip(t('river_tip'), { className: 'canal-tip', direction: 'top' });
-    }
-
-    if (trace.mouth) {
-      L.circleMarker(trace.mouth, {
+    // every route shares the same river mouth — draw the sea markers once
+    if (routes[0].mouth) {
+      L.circleMarker(routes[0].mouth, {
         radius: 16, color: '#26c6da', weight: 2, fill: false, opacity: 0.9,
         className: 'mouth-pulse sea', interactive: false,
       }).addTo(traceLayer);
-      L.circleMarker(trace.mouth, {
+      L.circleMarker(routes[0].mouth, {
         radius: 6, color: '#ffffff', weight: 2.5, fillColor: '#26c6da', fillOpacity: 1,
       }).addTo(traceLayer).bindTooltip(t('sea_tip'), { className: 'canal-tip sea-tip', direction: 'top', permanent: true, offset: [0, -10] });
     }
@@ -729,7 +739,7 @@
       color: '#ffffff', weight: 12, opacity: 0.85, className: 'sec-flash', interactive: false,
     }).addTo(traceLayer);
     setTimeout(() => traceLayer.removeLayer(flash), 1000);
-    const row = panelBody.querySelector(`.sec-row[data-sec="${idx}"]`);
+    const row = panelBody.querySelector(`.sec-row[data-key="${CSS.escape(key)}"][data-sec="${idx}"]`);
     if (row) {
       panelBody.querySelectorAll('.sec-row.active').forEach(r => r.classList.remove('active'));
       row.classList.add('active');
@@ -801,7 +811,8 @@
   }
 
   function searchLocation(latlng) {
-    trace = null;
+    selected = [];
+    traceCache.clear();
     traceLayer.clearLayers();
     const lat = latlng.lat, lng = latlng.lng;
     const items = [];
@@ -898,10 +909,12 @@
 
   // ---------- styling ----------
   function styleFor(p) {
-    const inTrace = trace && trace.reachable && trace.pathKeys.includes(p.key);
-    if (trace && trace.reachable) {
-      if (p.key === trace.startKey) return { color: displayColor(p), weight: 7, opacity: 1, lineCap: 'round' };
-      if (inTrace) return { color: displayColor(p), weight: 5, opacity: 0.95, lineCap: 'round' };
+    const routes = selected.map(k => traceCache.get(k)).filter(tr => tr && tr.reachable);
+    if (routes.length) {
+      if (routes.some(tr => tr.startKey === p.key))
+        return { color: displayColor(p), weight: 7, opacity: 1, lineCap: 'round' };
+      if (routes.some(tr => tr.pathKeys.includes(p.key)))
+        return { color: displayColor(p), weight: 5, opacity: 0.95, lineCap: 'round' };
       return { color: '#7a8a99', weight: 1, opacity: 0.12, lineCap: 'round' };
     }
     if (loc) {
@@ -934,7 +947,7 @@
     for (const [f, layers] of featureToLayer) layers.forEach((layer, i) => layer.setStyle(layerStyle(f, i)));
     // the situation glow competes with a trace/loc selection — fade it while one is active
     const pane = map.getPane('liveHalo');
-    if (pane) pane.style.opacity = (trace || loc) ? 0.15 : '';
+    if (pane) pane.style.opacity = (selected.length || loc) ? 0.15 : '';
   }
 
   // ---------- detail panel content ----------
@@ -958,7 +971,7 @@
           ? `${sec.main.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short');
         const extra = sec.stations.length > 1
           ? ` <span class="sec-more" title="${esc(sec.stations.slice(1).map(stationName).join(' · '))}">+${sec.stations.length - 1}</span>` : '';
-        return `<button class="sec-row" data-sec="${i}" title="${esc(t('live_st_' + sec.status))}">` +
+        return `<button class="sec-row" data-key="${esc(p.key)}" data-sec="${i}" title="${esc(t('live_st_' + sec.status))}">` +
           `<span class="live-dot" style="background:${color}"></span>` +
           `<span class="sec-km">${sec.fromKm.toFixed(1)}–${sec.toKm.toFixed(1)} ${t('km_unit')}</span>` +
           `<span class="sec-name">${esc(stationName(sec.main))}${extra}</span>` +
@@ -990,16 +1003,17 @@
     if (p.risk_type) badges.push(`<span class="badge type">${t('type_' + p.risk_type)}</span>`);
     if (p.curated) badges.push(`<span class="badge type">${t('reviewed')}</span>`);
 
+    const tr = traceCache.get(p.key);
     let routeHtml = '';
-    if (trace && !trace.reachable) {
+    if (tr && !tr.reachable) {
       routeHtml = `<div class="pop-path"><div class="label">${t('route_path')}</div>` +
         `<div class="chain">${t('no_conn').replace('{river}', t('river'))}</div></div>`;
-    } else if (trace) {
-      const chain = trace.pathKeys.map(k => displayName(nameOf(k))).join(' <span class="arrow">→</span> ');
+    } else if (tr) {
+      const chain = tr.pathKeys.map(k => displayName(nameOf(k))).join(' <span class="arrow">→</span> ');
       let dest = `<b>${t('dest_river')}</b>`;
-      if (trace.mouth) dest += ` <span class="arrow">→</span> <b>${t('dest_sea')}</b>`;
-      const kmNote = trace.riverKm != null
-        ? t('km_note').replace('{km}', trace.riverKm.toFixed(0))
+      if (tr.mouth) dest += ` <span class="arrow">→</span> <b>${t('dest_sea')}</b>`;
+      const kmNote = tr.riverKm != null
+        ? t('km_note').replace('{km}', tr.riverKm.toFixed(0))
         : '';
       routeHtml = `<div class="pop-path"><div class="label">${t('route_label')}</div>` +
         `<div class="chain">${chain} <span class="arrow">→</span> ${dest}</div>` +
@@ -1015,6 +1029,15 @@
       routeHtml +
       (note ? `<div class="pop-note">${note}</div>` : '') +
       `<div class="pop-meta">${p.length_km} km · ${p.waterway} · © OpenStreetMap</div>`;
+  }
+
+  // the panel stacks every selected canal (newest first) so several can be
+  // compared side by side while their routes stay on the map
+  function selectionHtml() {
+    if (!selected.length) return '';
+    if (selected.length === 1) return detailHtml(keyToFeature.get(selected[0]).properties);
+    return `<div class="pop-title">${t('sel_count').replace('{n}', selected.length)}</div>` +
+      [...selected].reverse().map(k => detailHtml(keyToFeature.get(k).properties)).join('<hr class="sel-sep">');
   }
 
   // ---------- canal layers ----------
@@ -1222,17 +1245,25 @@
   });
 
   function selectCanal(key) {
-    // the dropped pin stays on the map — the trace just takes over highlighting
-    trace = { startKey: key, ...computeTrace(key) };
+    const pos = selected.indexOf(key);
+    if (pos >= 0) { // clicking a selected canal takes it out of the selection
+      selected.splice(pos, 1);
+      traceCache.delete(key);
+    } else {
+      // the dropped pin stays on the map — the trace just takes over highlighting
+      selected.push(key);
+      traceCache.set(key, { startKey: key, ...computeTrace(key) });
+    }
     refreshCanalStyles();
+    if (!selected.length) { clearSelection(); return; }
     drawTrace();
     showChip('trace');
-    const p = keyToFeature.get(key).properties;
-    showDetail(detailHtml(p), () => detailHtml(p));
+    showDetail(selectionHtml(), () => selectionHtml());
   }
   function clearSelection() {
     setPickMode(false);
-    trace = null;
+    selected = [];
+    traceCache.clear();
     traceLayer.clearLayers();
     loc = null;
     locLayer.clearLayers();
@@ -1266,7 +1297,8 @@
   });
   document.getElementById('detail-close').addEventListener('click', clearSelection);
   document.getElementById('chip-sea').addEventListener('click', () => {
-    if (trace && trace.mouth) map.flyTo(trace.mouth, 12.5, { duration: 1.2 });
+    const tr = lastTrace();
+    if (tr && tr.mouth) map.flyTo(tr.mouth, 12.5, { duration: 1.2 });
   });
 
   // ---------- location lookup UI ----------
@@ -1328,8 +1360,8 @@
       return;
     }
     const secRow = e.target.closest('.sec-row');
-    if (secRow && trace) {
-      focusSection(trace.startKey, +secRow.dataset.sec);
+    if (secRow && secRow.dataset.key) {
+      focusSection(secRow.dataset.key, +secRow.dataset.sec);
       return;
     }
     const st = e.target.closest('.loc-struct');
@@ -1515,7 +1547,7 @@
     for (const [f, layers] of featureToLayer)
       for (const layer of layers) layer.setTooltipContent(displayName(f.properties));
     for (const { s, m } of structMarkers) m.setTooltipContent(displayName(s));
-    if (trace) drawTrace(); // rebuild river/sea tooltips in the new language
+    if (selected.length) drawTrace(); // rebuild river/sea tooltips in the new language
     if (loc) chipLoc.textContent = t('loc_chip');
     if (currentDetailRender) { panelBody.innerHTML = currentDetailRender(); updatePanelTitle(); }
     setSheetCollapsed(panel.classList.contains('collapsed')); // refresh the button title/aria
