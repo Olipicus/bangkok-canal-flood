@@ -81,7 +81,6 @@ body.collapsed #help-panel { left: 12px; }
   border: 1px solid var(--border); border-radius: 6px;
   width: 30px; height: 30px; font-size: 13px; line-height: 1;
 }
-.subtitle { margin: 4px 0 0; color: var(--accent); font-size: 13px; }
 
 /* language switch */
 .title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

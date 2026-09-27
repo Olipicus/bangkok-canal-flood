@@ -112,6 +112,21 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
 
 ## Rebuilding the data
 
+One command refreshes everything (geometry + live water levels), then just
+reload the page:
+
+```bash
+./update_data.sh              # full update: OSM geometry + BMA live readings
+./update_data.sh --live-only  # just the live readings (quick, the usual choice)
+```
+
+The script ends with a summary of exactly what the site will show — station
+counts, the latest reading, and the snapshot time ("อ่านค่าล่าสุด" /
+"ดึงข้อมูลเมื่อ"). If the BMA endpoint hiccups, the site keeps using the
+previous snapshot; the sidebar always shows how old it is.
+
+Under the hood this runs:
+
 ```bash
 node build_data.mjs   # OSM geometry → data/canals_data.js
 node fetch_live.mjs   # BMA telemetry → data/live_status.js (the site's live layer + timestamps)

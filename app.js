@@ -7,7 +7,6 @@
     en: {
       title: 'Bangkok Canals — Flood Situation Map',
       app_title: 'Bangkok Canals',
-      subtitle: 'Flood Situation Map · แผนที่คลองกรุงเทพฯ',
       intro_lead: `Bangkok's flood risk is driven by three things, and the 6,000+ km of canals (<em>khlong</em>) in and around the city are its main defence and its main weakness. The network continues into neighbouring provinces (Nonthaburi, Pathum Thani, Samut Prakan, Samut Sakhon, Nakhon Pathom, Chachoengsao) — water ignores the city boundary:`,
       intro_flash: '<span class="dot flash"></span><strong>Flash floods</strong> — intense monsoon rain overwhelms drainage faster than pumps can discharge.',
       intro_river: '<span class="dot riverine"></span><strong>River flood</strong> — runoff from the north pushes down the Chao Phraya (as in the great flood of 2011).',
@@ -78,7 +77,6 @@
     th: {
       title: 'คลองกรุงเทพฯ — แผนที่สถานการณ์น้ำท่วม',
       app_title: 'คลองกรุงเทพฯ',
-      subtitle: 'แผนที่สถานการณ์น้ำท่วม · Bangkok Canals',
       intro_lead: 'ความเสี่ยงน้ำท่วมของกรุงเทพฯ มาจากสามปัจจัย โดยคลองกว่า 6,000 กม. ในและรอบเมืองเป็นทั้งแนวป้องกันหลักและจุดอ่อนสำคัญ (<em>คลอง</em>) เครือข่ายยังต่อเนื่องออกไปถึงจังหวัดโดยรอบ (นนทบุรี ปทุมธานี สมุทรปราการ สมุทรสาคร นครปฐม ฉะเชิงเทรา) — น้ำไม่สนใจเส้นเขตเมือง:',
       intro_flash: '<span class="dot flash"></span><strong>น้ำท่วมฉับพลัน</strong> — ฝนมรสุมตกหนักท่วมระบบระบายน้ำเร็วกว่าที่ปั๊มจะระบายทัน',
       intro_river: '<span class="dot riverine"></span><strong>น้ำท่วมจากแม่น้ำ</strong> — น้ำจากภาคเหนือกดลงมาตามแม่น้ำเจ้าพระยา (อย่างเช่นมหาอุทกภัยปี 2554)',
