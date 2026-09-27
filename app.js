@@ -176,12 +176,12 @@
   const LIVE_COLOR = { critical: '#e53935', warning: '#fb8c00', normal: '#43a047', faulty: '#9e9e9e' };
   const stationByCode = new Map((LIVE ? LIVE.stations : []).map(s => [s.code, s]));
   const liveByCanal = LIVE ? LIVE.canals : {};
-  // highlighted canals (selected, on a traced route, in a location radius) carry
-  // their *current* status colour — static risk is only the fallback when no
-  // station reports that canal
+  // every canal carries its *current* status colour — selected or not — so the
+  // line never changes colour when clicked; static risk is only the fallback
+  // when no station reports that canal (or its stations are all faulty)
   function displayColor(p) {
     const lv = liveByCanal[p.key];
-    if (lv) return LIVE_COLOR[lv.status];
+    if (lv && lv.status !== 'faulty') return LIVE_COLOR[lv.status];
     return RISK_COLOR[p.risk];
   }
   const stationName = s => (lang === 'th' ? s.name : (s.name_en || s.name)) || s.code;
@@ -730,10 +730,10 @@
     }
     if (p.curated) {
       const w = Math.min(6, 1.8 + Math.sqrt(p.length_km) * 0.8);
-      return { color: RISK_COLOR[p.risk], weight: w, opacity: 0.95, lineCap: 'round' };
+      return { color: displayColor(p), weight: w, opacity: 0.95, lineCap: 'round' };
     }
     const w = Math.min(2.5, 0.9 + Math.sqrt(p.length_km) * 0.3);
-    return { color: RISK_COLOR[p.risk], weight: w, opacity: 0.4, lineCap: 'round' };
+    return { color: displayColor(p), weight: w, opacity: 0.4, lineCap: 'round' };
   }
   function refreshCanalStyles() {
     for (const [f, layer] of featureToLayer) layer.setStyle(styleFor(f.properties));
@@ -818,9 +818,9 @@
   Object.values(riskLayers).forEach(l => l.addTo(map));
 
   // ---------- live-severity halo ----------
-  // Static risk keeps the base colour; this glow marks the *current* situation
-  // from the telemetry snapshot, so a canal in flood is visible even where the
-  // historical rating is medium/low (most canals carry no curated history).
+  // The base line already carries the current status colour; this glow just
+  // adds emphasis, so a canal in flood stays visible among the thinner lines
+  // (most canals carry no curated history).
   const haloPane = map.createPane('liveHalo');
   haloPane.style.zIndex = 390; // under the canal lines (overlayPane = 400)
   const liveHalo = L.layerGroup();
