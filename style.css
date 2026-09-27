@@ -507,6 +507,8 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
     white-space: normal; text-align: center; line-height: 1.45;
     font-size: 12px; padding: 7px 12px;
   }
+  /* "go to the sea" shortcut is desktop-only */
+  #chip-sea { display: none; }
 
   /* 16px inputs keep iOS Safari from zooming the page on focus */
   #search, #loc-input, #loc-radius { font-size: 16px; }

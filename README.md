@@ -77,6 +77,15 @@ only the basemap tiles need internet.)
   pin stays on the map while you explore traces.
 - Searchable canal list, risk-level filters, base-map switcher
 
+## Canal knowledge wiki (for AI agents)
+
+[`wiki/`](wiki/README.md) holds a sourced, machine-readable knowledge base of Bangkok's canal
+network — per-canal entries with **flow direction & control mechanisms** (tides / gates /
+pumps), connectivity, coordinates, confidence ratings and explicit
+verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated notes above
+([wiki/map-corrections.md](wiki/map-corrections.md)). Start at [wiki/README.md](wiki/README.md);
+`wiki/hydrology.md` explains why canal flow directions here are operational, not fixed.
+
 ## Data & disclaimers
 
 - Canal geometry: © [OpenStreetMap](https://www.openstreetmap.org) contributors,
