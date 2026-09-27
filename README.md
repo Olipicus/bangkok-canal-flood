@@ -94,7 +94,10 @@ only the basemap tiles need internet.)
   in the sidebar and the choice persists. The panel lists each nearby canal
   with its direct junctions — every junction is clickable and opens the full
   drainage trace — plus any gates / pumping stations within reach; the dropped
-  pin stays on the map while you explore traces. Rows carry the same live-status
+  pin stays on the map while you explore traces. A **เลือกคลองทั้งหมด (select
+  all)** checkbox above the list puts every canal found inside the radius into
+  the multi-selection at once — stacked drainage traces and all (off by default;
+  a new search resets it). Rows carry the same live-status
   chip as the main list, and canals inside the radius keep
   their live colour while above the warning or critical bank level.
 - Searchable canal list, live-status filters (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ), base-map switcher

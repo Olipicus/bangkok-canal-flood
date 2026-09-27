@@ -18,6 +18,7 @@
       status_h: 'Canal water status',
       status_critical: 'Critical', status_warning: 'Warning', status_normal: 'Normal', status_dry: 'Low water',
       structs: 'Gates &amp; pumping stations',
+      select_all: 'Select all canals',
       search_ph: 'Search canal… e.g. Saen Saep / แสนแสบ',
       footer: `Canal geometry © OpenStreetMap contributors. Water status (critical / warning / normal / low water) is computed from live BMA drainage-telemetry readings against BMA's own thresholds — the same levels shown on flood69.peoplesparty.or.th — at the snapshot time shown; canals without a station stay grey. For actual alerts, follow BMA / Thai Government channels.`,
       chip: 'Drainage paths to the sea shown — click canals to add or remove them; empty map or Esc clears all',
@@ -96,6 +97,7 @@
       status_h: 'สถานะน้ำในคลอง',
       status_critical: 'วิกฤต', status_warning: 'เตือนภัย', status_normal: 'ปกติ', status_dry: 'น้ำต่ำ',
       structs: 'ประตูน้ำ &amp; สถานีสูบน้ำ',
+      select_all: 'เลือกคลองทั้งหมด',
       search_ph: 'ค้นหาคลอง… เช่น แสนแสบ / Saen Saep',
       footer: 'เรขาคณิตคลอง © OpenStreetMap contributors สถานะน้ำในคลอง (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) คำนวณจากค่าระดับน้ำสดของสำนักการระบายน้ำ กทม. เทียบเกณฑ์ของ กทม. เอง — ระดับเดียวกับที่แสดงบน flood69.peoplesparty.or.th — ตามเวลา snapshot คลองที่ไม่มีสถานีแสดงเป็นสีเทา สำหรับการแจ้งเตือนจริง โปรดติดตามประกาศของ กทม. / หน่วยงานราชการ',
       chip: 'กำลังแสดงเส้นทางระบายน้ำสู่ทะเล — คลิกคลองเพื่อเพิ่มหรือเอาออก คลิกพื้นที่ว่าง หรือกด Esc เพื่อล้างทั้งหมด',
@@ -900,7 +902,13 @@
         `<span class="meta">${kind} · ${fmtDist(x.d)}</span></button>`;
     }).join('');
 
+    // bulk toggle for the radius results: checked = every found canal is in
+    // the selection (traces stacked); a fresh search always renders it unchecked
+    const rowKey = it => it.f.properties.key || it.f.properties.name;
+    const allChecked = loc.items.every(it => selected.includes(rowKey(it)));
     return html +
+      `<label class="loc-select-all"><input type="checkbox" id="loc-select-all"${allChecked ? ' checked' : ''}>` +
+      `<span>${t('select_all')}</span></label>` +
       `<ul class="loc-list">${rows}</ul>` +
       (loc.structs.length
         ? `<div class="pop-path"><div class="label">${t('loc_structs_near')}</div>${structRows}</div>` : '') +
@@ -1375,6 +1383,36 @@
       const f = keyToFeature.get(row.dataset.key);
       if (f) focusCanal(f);
     }
+  });
+
+  // "select all" in the location panel: put every canal the search found inside
+  // the radius into the multi-selection (each with its own drainage trace), or
+  // take them all back out. The panel stays on the loc results so the checkbox
+  // itself remains the toggle; traces map to the usual stacked rendering.
+  function setRadiusSelection(on) {
+    if (!loc) return;
+    for (const it of loc.items) {
+      const key = it.f.properties.key || it.f.properties.name;
+      const pos = selected.indexOf(key);
+      if (on && pos < 0) {
+        selected.push(key);
+        traceCache.set(key, { startKey: key, ...computeTrace(key) });
+      } else if (!on && pos >= 0) {
+        selected.splice(pos, 1);
+        traceCache.delete(key);
+      }
+    }
+    refreshCanalStyles();
+    if (selected.length) {
+      drawTrace();
+      showChip('trace');
+    } else {
+      traceLayer.clearLayers();
+      chip.classList.add('hidden');
+    }
+  }
+  panelBody.addEventListener('change', e => {
+    if (e.target.id === 'loc-select-all') setRadiusSelection(e.target.checked);
   });
 
   // ---------- stats ----------

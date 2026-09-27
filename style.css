@@ -341,6 +341,14 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
   box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 
+.loc-select-all {
+  display: flex; align-items: center; gap: 7px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 7px 10px; margin-top: 10px; font-size: 12.5px; user-select: none;
+}
+.loc-select-all input { accent-color: var(--accent); margin: 0; }
+.loc-select-all:has(input:not(:checked)) { opacity: 0.75; }
+.loc-select-all:hover { border-color: var(--accent); }
 .loc-list { list-style: none; margin: 10px 0 0; padding: 0; }
 .loc-list li { padding: 8px 9px; border-radius: 7px; cursor: pointer; }
 .loc-list li:hover { background: var(--panel-2); }
