@@ -230,7 +230,7 @@
   // always-on base layer for canals no station reports
   const statusLayers = Object.fromEntries(STATUS_KEYS.map(s => [s, L.layerGroup()]));
   const baseLayer = L.layerGroup();
-  const featureToLayer = new Map();
+  const featureToLayer = new Map(); // feature -> its polylines (one per reach on multi-gauge canals)
   const traceLayer = L.layerGroup().addTo(map);
   let trace = null; // { startKey, pathKeys, riverPt }
   const locLayer = L.layerGroup().addTo(map);
@@ -644,8 +644,8 @@
         : (trace.riverPt ? [trace.riverPt[1], trace.riverPt[0]] : null);
       const isStart = i === 0;
       const color = displayColor(f.properties);
-      const secs = isStart ? sectionsByCanal.get(key) : null;
-      if (secs) { drawStartSections(key, secs, downstream); continue; }
+      const secs = sectionsByCanal.get(key);
+      if (secs) { drawTraceSections(key, secs, downstream, isStart); continue; }
       for (const line of f.geometry.coordinates) {
         const oriented = orientLine(line, downstream);
         const ll = toLatLngs([oriented])[0];
@@ -688,16 +688,21 @@
     }
   }
 
-  // the selected canal carries several gauges: draw it reach by reach, each in
-  // its own gauge's colour, with a clickable dot at every gauge
-  function drawStartSections(key, secs, downstream) {
+  // a canal on the route carries several gauges: draw it reach by reach in
+  // each gauge's colour; the start canal also gets a clickable dot per gauge
+  function drawTraceSections(key, secs, downstream, isStart) {
     for (const sec of secs.list) {
       const ll = toLatLngs([orientLine(sec.line, downstream)])[0];
-      L.polyline(ll, { color: '#ffffff', weight: 10, opacity: 0.95, interactive: false }).addTo(traceLayer);
-      L.polyline(ll, { color: LIVE_COLOR[sec.status] || NO_DATA_COLOR, weight: 6, opacity: 1, interactive: false }).addTo(traceLayer);
+      if (isStart) {
+        L.polyline(ll, { color: '#ffffff', weight: 10, opacity: 0.95, interactive: false }).addTo(traceLayer);
+        L.polyline(ll, { color: LIVE_COLOR[sec.status] || NO_DATA_COLOR, weight: 6, opacity: 1, interactive: false }).addTo(traceLayer);
+      } else {
+        L.polyline(ll, { color: LIVE_COLOR[sec.status] || NO_DATA_COLOR, weight: 4.5, opacity: 0.95, interactive: false }).addTo(traceLayer);
+      }
       L.polyline(ll, { color: '#ffffff', weight: 2.2, opacity: 0.9, className: 'flow-dash', interactive: false }).addTo(traceLayer);
       addFlowArrows(ll);
     }
+    if (!isStart) return;
     secs.list.forEach((sec, si) => {
       for (const s of sec.stations) {
         if (s.lat == null || s.lon == null) continue;
@@ -913,8 +918,20 @@
     const w = Math.min(2.5, 0.9 + Math.sqrt(p.length_km) * 0.3);
     return { color: displayColor(p), weight: w, opacity: 0.4, lineCap: 'round' };
   }
+  // per-polyline style: multi-gauge canals show each reach's own colour
+  // whenever the canal-level style would use the worst-status colour — i.e.
+  // in the default view, on a loc hit, and under a trace — while dimmed or
+  // filtered-out states stay uniform grey
+  function layerStyle(f, i) {
+    const p = f.properties;
+    const st = styleFor(p);
+    if (st.color !== displayColor(p)) return st;
+    const secs = sectionsByCanal.get(p.key || p.name);
+    if (!secs || !secs.list[i]) return st;
+    return { ...st, color: LIVE_COLOR[secs.list[i].status] || NO_DATA_COLOR };
+  }
   function refreshCanalStyles() {
-    for (const [f, layer] of featureToLayer) layer.setStyle(styleFor(f.properties));
+    for (const [f, layers] of featureToLayer) layers.forEach((layer, i) => layer.setStyle(layerStyle(f, i)));
     // the situation glow competes with a trace/loc selection — fade it while one is active
     const pane = map.getPane('liveHalo');
     if (pane) pane.style.opacity = (trace || loc) ? 0.15 : '';
@@ -1001,18 +1018,35 @@
   }
 
   // ---------- canal layers ----------
+  // multi-gauge canals become one polyline per reach so their colours read
+  // reach by reach even before anything is selected
+  let hoverTimer = null;
+  function applyHover(f, on) {
+    (featureToLayer.get(f) || []).forEach((layer, i) => {
+      const st = layerStyle(f, i);
+      layer.setStyle(on ? { ...st, weight: st.weight + 2.5, opacity: 1 } : st);
+    });
+  }
   for (const f of canals) {
     const p = f.properties;
     const key = p.key || p.name;
-    const layer = L.polyline(toLatLngs(f.geometry.coordinates),
-      { ...styleFor(p), pane: 'overlayPane', bubblingMouseEvents: false });
-    layer.bindTooltip(displayName(p), { sticky: true, className: 'canal-tip', direction: 'top' });
-    layer.on('click', () => selectCanal(key));
-    layer.on('mouseover', () => layer.setStyle({ weight: styleFor(p).weight + 2.5, opacity: 1 }));
-    layer.on('mouseout', () => layer.setStyle(styleFor(p)));
+    const secs = sectionsByCanal.get(key);
+    const geoms = secs ? secs.list.map(sec => sec.line) : [f.geometry.coordinates];
+    const layers = geoms.map((geom, i) => {
+      const layer = L.polyline(toLatLngs([geom])[0],
+        { ...layerStyle(f, i), pane: 'overlayPane', bubblingMouseEvents: false });
+      layer.bindTooltip(displayName(p), { sticky: true, className: 'canal-tip', direction: 'top' });
+      layer.on('click', () => selectCanal(key));
+      layer.on('mouseover', () => { clearTimeout(hoverTimer); applyHover(f, true); });
+      // sliding across a reach boundary fires out+in — debounce so the
+      // whole-canal highlight doesn't flicker at the seams
+      layer.on('mouseout', () => { clearTimeout(hoverTimer); hoverTimer = setTimeout(() => applyHover(f, false), 60); });
+      return layer;
+    });
     const lv = liveByCanal[key];
-    layer.addTo(lv && statusLayers[lv.status] ? statusLayers[lv.status] : baseLayer);
-    featureToLayer.set(f, layer);
+    const home = lv && statusLayers[lv.status] ? statusLayers[lv.status] : baseLayer;
+    for (const layer of layers) layer.addTo(home);
+    featureToLayer.set(f, layers);
   }
   baseLayer.addTo(map); // unmonitored canals — always on
   // draw severe statuses last so their lines sit on top where canals overlap
@@ -1028,14 +1062,22 @@
   const haloWeight = p => Math.min(6, 1.8 + Math.sqrt(p.length_km) * 0.8) + 7;
   for (const f of canals) {
     const p = f.properties;
-    const lv = liveByCanal[p.key];
+    const lv = liveByCanal[p.key || p.name];
     if (!lv || lv.status === 'normal' || lv.status === 'dry' || lv.status === 'faulty') continue;
-    for (const line of toLatLngs(f.geometry.coordinates))
-      L.polyline(line, {
-        color: LIVE_COLOR[lv.status], weight: haloWeight(p),
-        opacity: lv.status === 'critical' ? 0.42 : 0.28,
-        interactive: false, pane: 'liveHalo',
-      }).addTo(liveHalo);
+    // multi-gauge canals glow only around the reaches that are actually bad
+    const secs = sectionsByCanal.get(p.key || p.name);
+    const rings = secs
+      ? secs.list.filter(sec => sec.status === 'warning' || sec.status === 'critical')
+          .map(sec => ({ line: sec.line, status: sec.status }))
+      : [{ line: null, status: lv.status }];
+    for (const ring of rings) {
+      for (const line of (ring.line ? [ring.line] : f.geometry.coordinates))
+        L.polyline(toLatLngs([line])[0], {
+          color: LIVE_COLOR[ring.status], weight: haloWeight(p),
+          opacity: ring.status === 'critical' ? 0.42 : 0.28,
+          interactive: false, pane: 'liveHalo',
+        }).addTo(liveHalo);
+    }
   }
   liveHalo.addTo(map);
 
@@ -1403,10 +1445,11 @@
     const key = f.properties.key || f.properties.name;
     selectCanal(key);
     closeDrawerOnMobile(); // picked from a list — show the map, not the list
-    const layer = featureToLayer.get(f);
-    if (layer) {
-      const bounds = layer.getBounds().pad(0.25);
-      map.flyToBounds(bounds, { maxZoom: 13, duration: 0.8 });
+    const layers = featureToLayer.get(f) || [];
+    if (layers.length) {
+      const bounds = layers[0].getBounds();
+      for (let i = 1; i < layers.length; i++) bounds.extend(layers[i].getBounds());
+      map.flyToBounds(bounds.pad(0.25), { maxZoom: 13, duration: 0.8 });
     }
   }
 
@@ -1468,7 +1511,8 @@
     renderList(lastQuery);
     if (layerCtl) map.removeControl(layerCtl);
     layerCtl = L.control.layers({ [t('layer_osm')]: osm, [t('layer_esri')]: esriGray }, null, { position: 'bottomright' }).addTo(map);
-    for (const [f, layer] of featureToLayer) layer.setTooltipContent(displayName(f.properties));
+    for (const [f, layers] of featureToLayer)
+      for (const layer of layers) layer.setTooltipContent(displayName(f.properties));
     for (const { s, m } of structMarkers) m.setTooltipContent(displayName(s));
     if (trace) drawTrace(); // rebuild river/sea tooltips in the new language
     if (loc) chipLoc.textContent = t('loc_chip');
