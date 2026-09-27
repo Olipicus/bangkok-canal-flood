@@ -44,7 +44,11 @@ only the basemap tiles need internet.)
   stations; the sidebar shows citywide station counts plus **when the data is
   from** — both the latest station reading and when the snapshot was fetched —
   and every detail panel repeats the reading time of that canal's stations.
-  Refresh with `node fetch_live.mjs` (see *Rebuilding the data*).
+  Refresh with `node fetch_live.mjs` (see *Rebuilding the data*). When a canal
+  is above the warning or critical bank level, the detail panel leads with a
+  live status badge, the static badges are explicitly labelled as history, and
+  the selected canal keeps its live colour in the trace instead of its
+  historical risk colour.
 - **Live-situation glow** — canals whose stations currently read above their
   bank thresholds glow underneath their risk colour (bright red = critical,
   orange = warning), with a sidebar filter to toggle it. This separates the

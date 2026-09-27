@@ -26,7 +26,8 @@
       detail_collapse: 'Collapse panel', detail_expand: 'Expand panel',
       toggle_panel: 'Toggle panel',
       stats_canals: 'canals', stats_km: 'km total', stats_km_high: 'km high-risk', stats_structs: 'gates / pumps',
-      risk_badge_3: 'High risk', risk_badge_2: 'Medium risk', risk_badge_1: 'Low risk',
+      now_prefix: 'Now: ',
+      risk_badge_3: 'History: high risk', risk_badge_2: 'History: medium risk', risk_badge_1: 'History: low risk',
       type_flash: 'Flash flood', type_riverine: 'River flood', type_tidal: 'Tidal', type_mixed: 'Mixed',
       reviewed: 'Reviewed canal',
       route_path: 'Drainage path',
@@ -101,7 +102,8 @@
       detail_collapse: 'หุบแผงข้อมูล', detail_expand: 'กางแผงข้อมูล',
       toggle_panel: 'สลับแผงข้อมูล',
       stats_canals: 'คลอง', stats_km: 'กม. รวม', stats_km_high: 'กม. เสี่ยงสูง', stats_structs: 'ประตูน้ำ/ปั๊ม',
-      risk_badge_3: 'ความเสี่ยงสูง', risk_badge_2: 'ความเสี่ยงกลาง', risk_badge_1: 'ความเสี่ยงต่ำ',
+      now_prefix: 'ขณะนี้: ',
+      risk_badge_3: 'ประวัติ: เสี่ยงสูง', risk_badge_2: 'ประวัติ: เสี่ยงกลาง', risk_badge_1: 'ประวัติ: เสี่ยงต่ำ',
       type_flash: 'น้ำท่วมฉับพลัน', type_riverine: 'น้ำท่วมจากแม่น้ำ', type_tidal: 'น้ำทะเลหนุน', type_mixed: 'ผสม',
       reviewed: 'คลองที่ตรวจสอบข้อมูลแล้ว',
       route_path: 'เส้นทางระบายน้ำ',
@@ -177,6 +179,13 @@
   const LIVE_COLOR = { critical: '#e53935', warning: '#fb8c00', normal: '#43a047', faulty: '#9e9e9e' };
   const stationByCode = new Map((LIVE ? LIVE.stations : []).map(s => [s.code, s]));
   const liveByCanal = LIVE ? LIVE.canals : {};
+  // when a canal is above thresholds right now, the live colour carries over
+  // to its selection highlight — the click must not repaint red as orange
+  function displayColor(p) {
+    const lv = liveByCanal[p.key];
+    if (lv && (lv.status === 'critical' || lv.status === 'warning')) return LIVE_COLOR[lv.status];
+    return RISK_COLOR[p.risk];
+  }
   const stationName = s => (lang === 'th' ? s.name : (s.name_en || s.name)) || s.code;
   function fmtBangkok(ms) {
     if (!ms) return '—';
@@ -506,7 +515,7 @@
       const downstream = i + 1 < pathKeys.length ? linkPt(pathKeys[i], pathKeys[i + 1])
         : (trace.riverPt ? [trace.riverPt[1], trace.riverPt[0]] : null);
       const isStart = i === 0;
-      const color = RISK_COLOR[f.properties.risk];
+      const color = isStart ? displayColor(f.properties) : RISK_COLOR[f.properties.risk];
       for (const line of f.geometry.coordinates) {
         const oriented = orientLine(line, downstream);
         const ll = toLatLngs([oriented])[0];
@@ -708,7 +717,7 @@
   function styleFor(p) {
     const inTrace = trace && trace.reachable && trace.pathKeys.includes(p.key);
     if (trace && trace.reachable) {
-      if (p.key === trace.startKey) return { color: RISK_COLOR[p.risk], weight: 7, opacity: 1, lineCap: 'round' };
+      if (p.key === trace.startKey) return { color: displayColor(p), weight: 7, opacity: 1, lineCap: 'round' };
       if (inTrace) return { color: RISK_COLOR[p.risk], weight: 5, opacity: 0.95, lineCap: 'round' };
       return { color: '#7a8a99', weight: 1, opacity: 0.12, lineCap: 'round' };
     }
@@ -759,7 +768,11 @@
   }
 
   function detailHtml(p) {
-    const badges = [`<span class="badge ${RISK_CLASS[p.risk]}">${t('risk_badge_' + p.risk)}</span>`];
+    const badges = [];
+    const lvNow = liveByCanal[p.key];
+    if (lvNow && (lvNow.status === 'critical' || lvNow.status === 'warning'))
+      badges.push(`<span class="badge live-${lvNow.status}"><span class="live-dot" style="background:${LIVE_COLOR[lvNow.status]}"></span>${t('now_prefix')}${t('live_st_' + lvNow.status)}</span>`);
+    badges.push(`<span class="badge ${RISK_CLASS[p.risk]}">${t('risk_badge_' + p.risk)}</span>`);
     if (p.risk_type) badges.push(`<span class="badge type">${t('type_' + p.risk_type)}</span>`);
     if (p.curated) badges.push(`<span class="badge type">${t('reviewed')}</span>`);
 
