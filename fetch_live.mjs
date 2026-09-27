@@ -4,14 +4,22 @@
 // a snapshot the site reads to show each canal's current status and the
 // "updated at" timestamps.
 //
-// The endpoint has no CORS headers, so the browser cannot call it directly —
-// the site ships this snapshot instead. Re-run to refresh:
+// Statuses follow flood69.peoplesparty.or.th (the People's Party KlongMap
+// mirror): วิกฤต critical / เตือนภัย warning / ปกติ normal / น้ำต่ำ dry,
+// computed from each reading against BMA's own thresholds. BMA's map endpoint
+// lacks the low-water threshold, so the dry_in/checkdry fields are merged in
+// from the flood69 mirror by station code; stations without mirror data fall
+// back to BMA's reported status.
+//
+// The endpoints have no CORS headers, so the browser cannot call them directly
+// — the site ships this snapshot instead. Re-run to refresh:
 //
 //   node fetch_live.mjs
 import fs from 'fs';
 
 const PAGE = 'https://weather.bangkok.go.th/water';
 const API = 'https://weather.bangkok.go.th/water/PageMap/GoogleMap';
+const F69 = 'https://flood69.peoplesparty.or.th';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 const GEO = JSON.parse(fs.readFileSync('data/canals.geojson', 'utf8'));
 
@@ -36,6 +44,21 @@ async function fetchStations() {
     console.error(`attempt ${attempt}: HTTP ${res.status}`);
   }
   throw new Error('could not fetch BMA station data');
+}
+
+// flood69 mirror of BMA's KlongMap — the only feed carrying the low-water
+// threshold (dry_in + checkdry); live proxy first, static snapshot fallback
+async function fetchFlood69() {
+  for (const path of ['/api/klongmap', '/klong/klongmapdata.json']) {
+    try {
+      const res = await fetch(F69 + path, { headers: { 'User-Agent': UA } });
+      if (res.ok) return (await res.json()).waterStation || [];
+      console.error(`flood69 ${path}: HTTP ${res.status}`);
+    } catch (e) {
+      console.error(`flood69 ${path}: ${e.cause?.code || e.message}`);
+    }
+  }
+  return null; // thresholds unavailable — statuses degrade to BMA's own
 }
 
 // ---------- helpers ----------
@@ -103,9 +126,22 @@ const lookupName = name => { // try as-is, then without the คลอง/Khlong 
 };
 
 // ---------- map stations -> canals ----------
-// status ranking: critical (above the critical bank level) > warning > normal; faulty carries no level info
-const RANK = { critical: 3, warning: 2, normal: 1, faulty: 0 };
-const statusOf = r => {
+// status ranking, flood69's four levels + BMA's station-fault marker:
+// critical (above the critical bank level) > warning > dry (below the
+// low-water threshold) > normal; faulty carries no level info
+const RANK = { critical: 4, warning: 3, dry: 2, normal: 1, faulty: 0 };
+// flood69's algorithm (KlongMap): low water first, then bank thresholds —
+// level < dry_in (with checkdry) → dry, ≥ critical → critical,
+// ≥ warning → warning, else normal
+const statusOf = (r, f69) => {
+  const level = clean(r.wl_in);
+  if (f69 && level != null) {
+    const dry = clean(f69.dry_in), crit = clean(f69.critical), warn = clean(f69.warning);
+    if (Number(f69.checkdry) === 1 && dry !== null && level < dry) return 'dry';
+    if (crit !== null && level >= crit) return 'critical';
+    if (warn !== null && level >= warn) return 'warning';
+    if (crit !== null || warn !== null) return 'normal';
+  }
   const s = (r.txtStatus_en || '').toLowerCase();
   if (s === 'critical') return 'critical';
   if (s === 'alert') return 'warning'; // BMA's เตือนภัย
@@ -114,12 +150,13 @@ const statusOf = r => {
 };
 const NEAR_M = 200; // spatial attach tolerance
 
-function mapStations(raw) {
+function mapStations(raw, f69ByCode) {
   const stations = [], byCanal = new Map();
   for (const r of raw) {
     const lat = r.latitude, lon = r.longitude;
     if (!lat || !lon) continue;
-    const status = statusOf(r);
+    const f69 = f69ByCode.get(r.water_code) || null;
+    const status = statusOf(r, f69);
     const ts = epoch(r.site_timestamp);
     const st = {
       code: r.water_code || '',
@@ -128,7 +165,8 @@ function mapStations(raw) {
       district: r.district_name || null,
       district_en: r.district_name_en || null,
       status, level: clean(r.wl_in ?? r.wl_out01),
-      warning: clean(r.warning), critical: clean(r.critical),
+      warning: clean(f69?.warning ?? r.warning), critical: clean(f69?.critical ?? r.critical),
+      dry: clean(f69?.dry_in),
       ts, lat, lon,
     };
     // 1–2) name match (river_name, then the English station name before the comma)
@@ -178,6 +216,7 @@ function aggregate(byCanal) {
     out[key] = {
       status: rep?.status ?? 'faulty',
       level: rep?.level ?? null, warning: rep?.warning ?? null, critical: rep?.critical ?? null,
+      dry: rep?.dry ?? null,
       station: rep?.code ?? null,
       ts: latest,
       stations: sts.map(s => s.code),
@@ -188,10 +227,15 @@ function aggregate(byCanal) {
 
 // ---------- main ----------
 const raw = await fetchStations();
-const { stations, byCanal } = mapStations(raw);
+const f69 = await fetchFlood69();
+const f69ByCode = new Map((f69 || [])
+  .filter(s => s.water_station_info?.water_code)
+  .map(s => [s.water_station_info.water_code, s.water_station_info]));
+if (f69 == null) console.error('flood69 mirror unavailable — dry status falls back to BMA-reported statuses');
+const { stations, byCanal } = mapStations(raw, f69ByCode);
 const byCanalAgg = aggregate(byCanal);
 
-const counts = { critical: 0, warning: 0, normal: 0, faulty: 0 };
+const counts = { critical: 0, warning: 0, normal: 0, dry: 0, faulty: 0 };
 for (const s of stations) counts[s.status]++;
 const latestReading = stations.reduce((a, s) => Math.max(a, s.ts || 0), 0);
 const nameHits = stations.filter(s => s.match === 'name').length;
@@ -211,6 +255,6 @@ fs.writeFileSync('data/live_status.js',
 
 console.log(`stations: ${stations.length} (name-matched ${nameHits}, spatial≤${NEAR_M}m ${nearHits}, unmapped ${stations.length - nameHits - nearHits})`);
 console.log(`canals with live data: ${Object.keys(byCanalAgg).length}`);
-console.log(`status: วิกฤต ${counts.critical} · เตือนภัย ${counts.warning} · ปกติ ${counts.normal} · ขัดข้อง ${counts.faulty}`);
+console.log(`status: วิกฤต ${counts.critical} · เตือนภัย ${counts.warning} · ปกติ ${counts.normal} · น้ำต่ำ ${counts.dry} · ขัดข้อง ${counts.faulty}`);
 console.log(`latest station reading: ${new Date(latestReading).toISOString()}`);
 console.log(`wrote data/live_status.js (${Math.round(fs.statSync('data/live_status.js').size / 1024)} KB)`);

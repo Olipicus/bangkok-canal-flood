@@ -1,9 +1,9 @@
 # Bangkok Canals — Flood Situation Map
 
 An interactive map of Bangkok's canal (*khlong*) network, colored by each
-canal's current water-level status (BMA telemetry) with the compiled
-flood-risk assessment as fallback, to help understand how the city floods and
-where.
+canal's current water-level status (BMA telemetry, classified like
+flood69.peoplesparty.or.th: วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ), to help
+understand how the city floods and where.
 
 ![screenshot](screenshot.png)
 
@@ -33,30 +33,35 @@ only the basemap tiles need internet.)
   choice persists in `localStorage`. Canal names carry both languages
   (`name` / `name_th`) and reviewed canals have notes in both (`note` /
   `note_th`), so nothing is lost in either language.
-- **Flood-risk coloring** — red = high, orange = medium, green = low, with
-  the risk driver tagged: *flash flood* (monsoon rain), *riverine* (Chao Phraya
+- **Live-status coloring & filters** — every canal line is coloured by its
+  **current water status**, classified exactly like
+  [flood69.peoplesparty.or.th](https://flood69.peoplesparty.or.th) (the People's
+  Party mirror of BMA's KlongMap): red = **วิกฤต critical** (above the critical
+  bank threshold), orange = **เตือนภัย warning** (above the warning threshold),
+  green = **ปกติ normal**, light blue = **น้ำต่ำ low water** (below the dry
+  threshold, merged in from the flood69 mirror by station code); canals without
+  a reporting station stay grey. The sidebar filters switch these four statuses
+  (canals without live data always stay on), with the risk *driver* still tagged
+  on reviewed canals: *flash flood* (monsoon rain), *riverine* (Chao Phraya
   flood from the north), *tidal* (sea blocking outflows), or *mixed*
 - **30+ reviewed corridors** drawn bold, with notes on documented flood history
   (2011 river flood, chronic monsoon flash-flood spots, tidal backflow)
 - **Live water levels** — a snapshot of BMA Drainage & Sewerage Department
   telemetry (300+ stations on Bangkok's canals, retention ponds and river),
   mapped onto the canal network. Canals with a station show their current status
-  (above critical / above warning / normal / station fault), the reading in
-  m (MSD) against the warning and critical bank thresholds, and the individual
-  stations; the sidebar shows citywide station counts plus **when the data is
+  (critical / warning / normal / low water / station fault), the reading in
+  m (MSD) against the warning, critical and low-water thresholds, and the
+  individual stations; the sidebar shows citywide station counts plus **when the data is
   from** — both the latest station reading and when the snapshot was fetched —
   and every detail panel repeats the reading time of that canal's stations.
   Refresh with `node fetch_live.mjs` (see *Rebuilding the data*). The detail
-  panel shows the canal's current status as a badge (critical, warning or
-  normal) and no longer shows a static historical-risk badge; every canal line
+  panel shows the canal's current status as a badge; every canal line
   is coloured by its current status — selected or not, so clicking a canal
-  never changes its colour — with static risk remaining only where no station
-  reports.
+  never changes its colour — and grey only where no station reports.
 - **Live-situation glow** — canals whose stations currently read above their
   bank thresholds glow underneath their current-status colour (bright red =
   critical, orange = warning), with a sidebar filter to toggle it. The glow is
-  pure emphasis: it keeps a canal in flood visible among the thinner lines
-  even where its compiled risk rating is medium or low.
+  pure emphasis: it keeps a canal in flood visible among the thinner lines.
 - **Chao Phraya tides** — today's two high / two low tides (m MSD) in the
   sidebar, with the next tide highlighted; fetched via
   `node fetch_flood69.mjs` (see *Rebuilding the data*).
@@ -89,10 +94,10 @@ only the basemap tiles need internet.)
   in the sidebar and the choice persists. The panel lists each nearby canal
   with its direct junctions — every junction is clickable and opens the full
   drainage trace — plus any gates / pumping stations within reach; the dropped
-  pin stays on the map while you explore traces. Rows carry the same risk chip
-  plus live-status dot as the main list, and canals inside the radius keep
+  pin stays on the map while you explore traces. Rows carry the same live-status
+  chip as the main list, and canals inside the radius keep
   their live colour while above the warning or critical bank level.
-- Searchable canal list, risk-level filters, base-map switcher
+- Searchable canal list, live-status filters (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ), base-map switcher
 
 ## Canal knowledge wiki (for AI agents)
 
@@ -117,19 +122,14 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
   isn't named in OSM (shown as "nearby station" in the UI). ~290 of ~312
   stations map onto 150+ canals; retention ponds and ditches off the network
   only count toward the citywide totals.
-- Risk ratings are a **static, compiled orientation aid** based on documented
-  flood history — not a forecast. The live-status layer is **telemetry readings
-  at the snapshot time**, not a warning service: "critical" means the water had
-  passed the BMA's critical bank level for that canal when it was read. For
-  live flood warnings use BMA / Thai Government official channels. Only the
-  ~35 reviewed corridors carry curated ratings; every other canal gets a
-  regional default (medium) from its centroid, and only true main rivers
-  (Chao Phraya, Tha Chin — map context, not at-risk assets) default to low.
-  OSM's `waterway=river` tag alone never implies low risk: many
-  outer-province khlongs carry it while behaving like ordinary canals. Where
-  the two layers disagree — e.g. an unreviewed canal whose stations now read
-  above the critical bank level — the line itself turns the live colour, and
-  the sidebar dots show it, whatever its static rating says.
+- Water statuses (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) are **telemetry readings at
+  the snapshot time**, not a warning service: "critical" means the water had
+  passed the BMA's critical bank level for that canal when it was read, and
+  "low water" means it sat below the BMA's dry threshold (a condition you only
+  see in the dry season). The classification mirrors
+  flood69.peoplesparty.or.th level-for-level; stations without mirror data
+  fall back to BMA's own reported status. For live flood warnings use BMA /
+  Thai Government official channels.
 - The trace shows the **drainage route** toward the river and out to the Gulf;
   actual flow direction can pause or reverse with the tide, and gates control
   each connection.
@@ -166,7 +166,13 @@ node fetch_flood69.mjs # BMA tides via flood69 → data/flood69.js (sidebar tide
 (`POST weather.bangkok.go.th/water/PageMap/GoogleMap` — it 403s without a
 session cookie and a browser User-Agent, and sends no CORS headers, which is
 why the site ships a generated snapshot instead of fetching live), maps the
-stations onto the canal network, and writes `data/live_status.js`. Re-run it
+stations onto the canal network, and writes `data/live_status.js`. To classify
+stations into วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ it also reads the flood69
+mirror's station records (same station codes) for the low-water threshold
+(`dry_in` + `checkdry`) that BMA's page endpoint doesn't expose, then applies
+flood69's own algorithm: level < dry threshold → dry, ≥ critical → critical,
+≥ warning → warning, else normal (falling back to BMA's reported status where
+the mirror has no record). Re-run it
 whenever you want fresher readings — the sidebar always shows how old the
 snapshot is.
 
@@ -174,8 +180,9 @@ snapshot is.
 low tides, m MSD) to the sidebar. It reads the People's Party flood portal
 (`flood69.peoplesparty.or.th/api/klongmap`, with the portal's own static
 snapshot as fallback) — a 5-minute-cache mirror of BMA's KlongMap schematic
-(`weather.bangkok.go.th/KlongMap`). The mirror carries no station coordinates,
-so it can't feed the canal map; only the `dailyheightwater` tide table is
-used. A failure there doesn't abort the update — the site just keeps showing
+(`weather.bangkok.go.th/KlongMap`). This is also where `fetch_live.mjs` gets
+the low-water threshold for the น้ำต่ำ status; this script itself only uses
+the `dailyheightwater` tide table. A failure there doesn't abort the update —
+the site just keeps showing
 the previous tide snapshot. Don't run it more often than needed: the portal
 caches upstream precisely to spare BMA's system.

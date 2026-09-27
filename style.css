@@ -120,20 +120,21 @@ section, footer { padding: 14px 20px; border-bottom: 1px solid var(--border); }
 
 /* ---------- controls ---------- */
 h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 0 0 9px; }
-.filters { display: flex; gap: 6px; margin-bottom: 10px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .risk-filter, .struct-filter {
   display: flex; align-items: center; gap: 7px; cursor: pointer;
   background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px;
   padding: 7px 10px; font-size: 12.5px; user-select: none;
 }
-.risk-filter { flex: 1; justify-content: center; }
+.risk-filter { flex: 1 1 calc(50% - 3px); justify-content: center; white-space: nowrap; }
 .struct-filter { margin-bottom: 10px; width: 100%; }
 .risk-filter input, .struct-filter input { accent-color: var(--accent); margin: 0; }
 .risk-filter:has(input:not(:checked)), .struct-filter:has(input:not(:checked)) { opacity: 0.45; }
 .swatch { width: 11px; height: 11px; border-radius: 3px; }
-.swatch.high { background: var(--high); }
-.swatch.med { background: var(--med); }
-.swatch.low { background: var(--low); }
+.swatch.critical { background: var(--high); }
+.swatch.warning { background: var(--med); }
+.swatch.normal { background: var(--low); }
+.swatch.dry { background: var(--accent); }
 
 /* pulsing dot for the live-status halo filter — mirrors the map glow */
 .live-halo-dot {
@@ -208,14 +209,12 @@ body.detail-open.collapsed #trace-chip { left: calc((100% - var(--detail-w)) / 2
 .pop-thai { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
 .pop-badges { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 .badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 20px; }
-.badge.high { background: rgba(229,57,53,0.18); color: #ff8a80; border: 1px solid var(--high); }
-.badge.med { background: rgba(251,140,0,0.15); color: #ffb74d; border: 1px solid var(--med); }
-.badge.low { background: rgba(67,160,71,0.15); color: #81c784; border: 1px solid var(--low); }
 .badge.type { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
-.badge.live-critical, .badge.live-warning, .badge.live-normal { display: inline-flex; align-items: center; gap: 5px; }
+.badge.live-critical, .badge.live-warning, .badge.live-normal, .badge.live-dry { display: inline-flex; align-items: center; gap: 5px; }
 .badge.live-critical { background: rgba(229,57,53,0.3); color: #ff8a80; border: 1px solid var(--high); }
 .badge.live-warning { background: rgba(251,140,0,0.25); color: #ffb74d; border: 1px solid var(--med); }
 .badge.live-normal { background: rgba(67,160,71,0.2); color: #81c784; border: 1px solid var(--low); }
+.badge.live-dry { background: rgba(79,195,247,0.16); color: var(--accent); border: 1px solid var(--accent); }
 .pop-note { color: var(--muted); font-size: 12.5px; }
 .pop-meta { color: var(--muted); font-size: 11.5px; margin-top: 8px; }
 .pop-path { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--border); }

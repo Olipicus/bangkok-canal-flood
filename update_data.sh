@@ -54,7 +54,7 @@ if (!m) { console.error("data/live_status.js อ่านไม่ได้"); p
 const d = JSON.parse(m[1]);
 const fmt = ms => new Date(ms).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" });
 console.log("สถานีตรวจวัด  : " + d.stations_total + " จุด (มีข้อมูลสดบน " + Object.keys(d.canals).length + " คลอง)");
-console.log("สถานะ        : วิกฤต " + d.counts.critical + " · เตือนภัย " + d.counts.warning + " · ปกติ " + d.counts.normal + " · ขัดข้อง " + d.counts.faulty);
+console.log("สถานะ        : วิกฤต " + d.counts.critical + " · เตือนภัย " + d.counts.warning + " · ปกติ " + d.counts.normal + " · น้ำต่ำ " + (d.counts.dry || 0) + " · ขัดข้อง " + d.counts.faulty);
 console.log("อ่านค่าล่าสุด : " + fmt(d.latest_reading));
 console.log("ดึงข้อมูลเมื่อ : " + fmt(d.fetched_at));
 '

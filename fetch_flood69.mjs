@@ -3,9 +3,9 @@
 //
 // The portal mirrors BMA's KlongMap (สำนักการระบายน้ำ กทม. —
 // weather.bangkok.go.th/KlongMap) with a 5-minute cache to spare BMA's system,
-// so run this sparingly too. The mirror has no station coordinates (it is a
-// schematic), so it cannot feed the canal map — what it adds beyond
-// fetch_live.mjs is `dailyheightwater`: today's two high / two low tides in
+// so run this sparingly too. fetch_live.mjs also reads this mirror's station
+// records for the low-water threshold (dry_in/checkdry); what this script adds
+// beyond that is `dailyheightwater`: today's two high / two low tides in
 // metres MSD, which the sidebar shows next to the live water levels.
 //
 // Like fetch_live.mjs this is a build-time snapshot: the site never calls the

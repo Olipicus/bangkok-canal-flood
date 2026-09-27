@@ -15,17 +15,17 @@
       help_title: 'About this map',
       help_btn_title: 'Help & background',
       help_close_title: 'Close',
-      risk_h: 'Flood risk level',
-      risk_high: 'High', risk_med: 'Medium', risk_low: 'Low',
+      status_h: 'Canal water status',
+      status_critical: 'Critical', status_warning: 'Warning', status_normal: 'Normal', status_dry: 'Low water',
       structs: 'Gates &amp; pumping stations',
       search_ph: 'Search canal… e.g. Saen Saep / แสนแสบ',
-      footer: `Canal geometry © OpenStreetMap contributors. Risk ratings are a compiled assessment of documented flood history (2011 flood, monsoon seasons); "Live water levels" come from BMA drainage telemetry at the snapshot time shown. For actual alerts, follow BMA / Thai Government channels.`,
+      footer: `Canal geometry © OpenStreetMap contributors. Water status (critical / warning / normal / low water) is computed from live BMA drainage-telemetry readings against BMA's own thresholds — the same levels shown on flood69.peoplesparty.or.th — at the snapshot time shown; canals without a station stay grey. For actual alerts, follow BMA / Thai Government channels.`,
       chip: 'Drainage path to the sea shown — click another canal, empty map, or press Esc to clear',
       chip_sea: '🌊 to the sea', chip_sea_title: 'Fly to the river mouth',
       details: 'Details', detail_close_title: 'Clear selection and close',
       detail_collapse: 'Collapse panel', detail_expand: 'Expand panel',
       toggle_panel: 'Toggle panel',
-      stats_canals: 'canals', stats_km: 'km total', stats_km_high: 'km high-risk', stats_structs: 'gates / pumps',
+      stats_canals: 'canals', stats_km: 'km total', stats_km_crit: 'km critical now', stats_structs: 'gates / pumps',
       now_prefix: 'Now: ',
       type_flash: 'Flash flood', type_riverine: 'River flood', type_tidal: 'Tidal', type_mixed: 'Mixed',
       reviewed: 'Reviewed canal',
@@ -64,11 +64,11 @@
       m_unit: 'm', km_unit: 'km',
       live_h: 'Live water levels',
       live_reading: 'Latest reading', live_fetched: 'Snapshot fetched',
-      live_src: `Water-level readings from the BMA Drainage and Sewerage Department telemetry (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>), mapped onto the canal network. A static snapshot — refresh with <code>node fetch_live.mjs</code>.`,
-      live_cri: 'critical', live_war: 'warning', live_nor: 'normal', live_fau: 'faulty',
+      live_src: `Water-level readings from the BMA Drainage and Sewerage Department telemetry (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>), mapped onto the canal network; statuses classified against BMA's thresholds exactly like <a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>. A static snapshot — refresh with <code>node fetch_live.mjs</code>.`,
+      live_cri: 'critical', live_war: 'warning', live_nor: 'normal', live_dry: 'low water', live_fau: 'faulty',
       live_st_critical: 'Above critical level', live_st_warning: 'Above warning level',
-      live_st_normal: 'Normal level', live_st_faulty: 'Station fault — no reading',
-      live_level: 'Level', live_crit: 'critical thr.', live_warn: 'warning thr.', live_unit: 'm (MSD)',
+      live_st_normal: 'Normal level', live_st_dry: 'Below low-water threshold', live_st_faulty: 'Station fault — no reading',
+      live_level: 'Level', live_crit: 'critical thr.', live_warn: 'warning thr.', live_low: 'low-water thr.', live_unit: 'm (MSD)',
       live_faulty_short: 'fault',
       live_near: 'nearby station',
       live_none: 'No BMA telemetry station on this canal.',
@@ -90,17 +90,17 @@
       help_title: 'เกี่ยวกับแผนที่นี้',
       help_btn_title: 'วิธีใช้และข้อมูลเบื้องต้น',
       help_close_title: 'ปิด',
-      risk_h: 'ระดับความเสี่ยงน้ำท่วม',
-      risk_high: 'สูง', risk_med: 'กลาง', risk_low: 'ต่ำ',
+      status_h: 'สถานะน้ำในคลอง',
+      status_critical: 'วิกฤต', status_warning: 'เตือนภัย', status_normal: 'ปกติ', status_dry: 'น้ำต่ำ',
       structs: 'ประตูน้ำ &amp; สถานีสูบน้ำ',
       search_ph: 'ค้นหาคลอง… เช่น แสนแสบ / Saen Saep',
-      footer: 'เรขาคณิตคลอง © OpenStreetMap contributors การจัดระดับความเสี่ยงรวบรวมจากประวัติน้ำท่วมที่บันทึกไว้ (มหาอุทกภัยปี 2554 ฤดูมรสุม) ส่วน "สถานะน้ำปัจจุบัน" มาจากสถานีตรวจวัดของสำนักการระบายน้ำ กทม. ตามเวลา snapshot ที่แสดง — สำหรับการแจ้งเตือนจริง โปรดติดตามประกาศของ กทม. / หน่วยงานราชการ',
+      footer: 'เรขาคณิตคลอง © OpenStreetMap contributors สถานะน้ำในคลอง (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) คำนวณจากค่าระดับน้ำสดของสำนักการระบายน้ำ กทม. เทียบเกณฑ์ของ กทม. เอง — ระดับเดียวกับที่แสดงบน flood69.peoplesparty.or.th — ตามเวลา snapshot คลองที่ไม่มีสถานีแสดงเป็นสีเทา สำหรับการแจ้งเตือนจริง โปรดติดตามประกาศของ กทม. / หน่วยงานราชการ',
       chip: 'กำลังแสดงเส้นทางระบายน้ำสู่ทะเล — คลิกคลองอื่น คลิกพื้นที่ว่าง หรือกด Esc เพื่อล้าง',
       chip_sea: '🌊 ไปทางออกทะเล', chip_sea_title: 'บินไปยังปากแม่น้ำ',
       details: 'รายละเอียด', detail_close_title: 'ล้างการเลือกและปิด',
       detail_collapse: 'หุบแผงข้อมูล', detail_expand: 'กางแผงข้อมูล',
       toggle_panel: 'สลับแผงข้อมูล',
-      stats_canals: 'คลอง', stats_km: 'กม. รวม', stats_km_high: 'กม. เสี่ยงสูง', stats_structs: 'ประตูน้ำ/ปั๊ม',
+      stats_canals: 'คลอง', stats_km: 'กม. รวม', stats_km_crit: 'กม. วิกฤตขณะนี้', stats_structs: 'ประตูน้ำ/ปั๊ม',
       now_prefix: 'ขณะนี้: ',
       type_flash: 'น้ำท่วมฉับพลัน', type_riverine: 'น้ำท่วมจากแม่น้ำ', type_tidal: 'น้ำทะเลหนุน', type_mixed: 'ผสม',
       reviewed: 'คลองที่ตรวจสอบข้อมูลแล้ว',
@@ -139,11 +139,11 @@
       m_unit: 'ม.', km_unit: 'กม.',
       live_h: 'สถานะน้ำปัจจุบัน',
       live_reading: 'อ่านค่าล่าสุด', live_fetched: 'ดึงข้อมูลเมื่อ',
-      live_src: 'ข้อมูลจากสถานีตรวจวัดระดับน้ำของสำนักการระบายน้ำ กทม. (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>) จับคู่เข้ากับเครือข่ายคลอง — เป็น snapshot รีเฟรชด้วย <code>node fetch_live.mjs</code>',
-      live_cri: 'วิกฤต', live_war: 'เตือนภัย', live_nor: 'ปกติ', live_fau: 'ขัดข้อง',
+      live_src: 'ข้อมูลจากสถานีตรวจวัดระดับน้ำของสำนักการระบายน้ำ กทม. (<a href="https://weather.bangkok.go.th/water" target="_blank" rel="noopener">weather.bangkok.go.th/water</a>) จับคู่เข้ากับเครือข่ายคลอง — จัดสถานะเทียบเกณฑ์ของ กทม. เช่นเดียวกับ <a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a> — เป็น snapshot รีเฟรชด้วย <code>node fetch_live.mjs</code>',
+      live_cri: 'วิกฤต', live_war: 'เตือนภัย', live_nor: 'ปกติ', live_dry: 'น้ำต่ำ', live_fau: 'ขัดข้อง',
       live_st_critical: 'น้ำเกินเกณฑ์วิกฤต', live_st_warning: 'น้ำเกินเกณฑ์เตือนภัย',
-      live_st_normal: 'ระดับน้ำปกติ', live_st_faulty: 'สถานีขัดข้อง — ไม่มีการอ่านค่า',
-      live_level: 'ระดับน้ำ', live_crit: 'เกณฑ์วิกฤต', live_warn: 'เกณฑ์เตือนภัย', live_unit: 'ม.รทก.',
+      live_st_normal: 'ระดับน้ำปกติ', live_st_dry: 'น้ำต่ำกว่าเกณฑ์น้ำต่ำ', live_st_faulty: 'สถานีขัดข้อง — ไม่มีการอ่านค่า',
+      live_level: 'ระดับน้ำ', live_crit: 'เกณฑ์วิกฤต', live_warn: 'เกณฑ์เตือนภัย', live_low: 'เกณฑ์น้ำต่ำ', live_unit: 'ม.รทก.',
       live_faulty_short: 'ขัดข้อง',
       live_near: 'สถานีใกล้คลอง',
       live_none: 'ไม่มีสถานีตรวจวัดของ กทม. บนคลองนี้',
@@ -167,22 +167,23 @@
     return other && other !== primary ? other : null;
   };
 
-  const RISK_COLOR = { 3: '#e53935', 2: '#fb8c00', 1: '#43a047' };
-
   // ---------- live water-level snapshot (BMA telemetry, refreshed via fetch_live.mjs) ----------
   const LIVE = window.LIVE_STATUS || null;
   // ---------- tide prediction (BMA via flood69.peoplesparty.or.th, refreshed via fetch_flood69.mjs) ----------
   const TIDE = window.FLOOD69_STATUS || null;
-  const LIVE_COLOR = { critical: '#e53935', warning: '#fb8c00', normal: '#43a047', faulty: '#9e9e9e' };
+  // flood69's four levels: วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ
+  const STATUS_KEYS = ['critical', 'warning', 'normal', 'dry'];
+  const LIVE_COLOR = { critical: '#e53935', warning: '#fb8c00', normal: '#43a047', dry: '#4fc3f7', faulty: '#9e9e9e' };
   const stationByCode = new Map((LIVE ? LIVE.stations : []).map(s => [s.code, s]));
   const liveByCanal = LIVE ? LIVE.canals : {};
   // every canal carries its *current* status colour — selected or not — so the
-  // line never changes colour when clicked; static risk is only the fallback
-  // when no station reports that canal (or its stations are all faulty)
+  // line never changes colour when clicked; canals without a reporting station
+  // (or whose stations are all faulty) stay a neutral grey
+  const NO_DATA_COLOR = '#7a8a99';
   function displayColor(p) {
     const lv = liveByCanal[p.key];
     if (lv && lv.status !== 'faulty') return LIVE_COLOR[lv.status];
-    return RISK_COLOR[p.risk];
+    return NO_DATA_COLOR;
   }
   const stationName = s => (lang === 'th' ? s.name : (s.name_en || s.name)) || s.code;
   function fmtBangkok(ms) {
@@ -221,7 +222,10 @@
   for (const f of canals) keyToFeature.set(f.properties.key || f.properties.name, f);
   const nameOf = key => (keyToFeature.get(key) || {}).properties || { name: key };
 
-  const riskLayers = { 3: L.layerGroup(), 2: L.layerGroup(), 1: L.layerGroup() };
+  // one layer per live status — the sidebar checkboxes toggle these — plus an
+  // always-on base layer for canals no station reports
+  const statusLayers = Object.fromEntries(STATUS_KEYS.map(s => [s, L.layerGroup()]));
+  const baseLayer = L.layerGroup();
   const featureToLayer = new Map();
   const traceLayer = L.layerGroup().addTo(map);
   let trace = null; // { startKey, pathKeys, riverPt }
@@ -691,9 +695,9 @@
         connHtml = `<span class="conn-none">${t('loc_noconn')}</span>`;
       }
       const lvHere = liveByCanal[key];
+      const lvTitle = lvHere ? ` title="${t('live_st_' + lvHere.status)}"` : '';
       return `<li class="loc-item" data-key="${esc(key)}">` +
-        `<div class="row1"><span class="chip" style="background:${RISK_COLOR[p.risk]}"></span>` +
-        (lvHere ? `<span class="livechip" style="background:${LIVE_COLOR[lvHere.status]}" title="${t('live_st_' + lvHere.status)}"></span>` : '') +
+        `<div class="row1"><span class="chip" style="background:${displayColor(p)}"${lvTitle}></span>` +
         `<span class="name">${displayName(p)}${sec ? ` <span class="thai">${sec}</span>` : ''}</span>` +
         `<span class="dist">${fmtDist(it.d)}</span></div>` +
         `<div class="conns"><span class="conn-label">${t('loc_conn')}:</span> ${connHtml}</div></li>`;
@@ -758,7 +762,8 @@
       (lv.level != null
         ? `<div class="live-levels">${t('live_level')}: <b>${lv.level.toFixed(2)}</b> ${t('live_unit')}` +
           (lv.warning != null ? ` · ${t('live_warn')} ${lv.warning}` : '') +
-          (lv.critical != null ? ` · ${t('live_crit')} ${lv.critical}` : '') + `</div>`
+          (lv.critical != null ? ` · ${t('live_crit')} ${lv.critical}` : '') +
+          (lv.dry != null ? ` · ${t('live_low')} ${lv.dry}` : '') + `</div>`
         : '') +
       (shown.length
         ? `<div class="live-stations">${shown.map(stationLine).join('<br>')}` +
@@ -812,10 +817,13 @@
     layer.on('click', () => selectCanal(key));
     layer.on('mouseover', () => layer.setStyle({ weight: styleFor(p).weight + 2.5, opacity: 1 }));
     layer.on('mouseout', () => layer.setStyle(styleFor(p)));
-    layer.addTo(riskLayers[p.risk]);
+    const lv = liveByCanal[key];
+    layer.addTo(lv && statusLayers[lv.status] ? statusLayers[lv.status] : baseLayer);
     featureToLayer.set(f, layer);
   }
-  Object.values(riskLayers).forEach(l => l.addTo(map));
+  baseLayer.addTo(map); // unmonitored canals — always on
+  // draw severe statuses last so their lines sit on top where canals overlap
+  for (const s of ['normal', 'dry', 'warning', 'critical']) statusLayers[s].addTo(map);
 
   // ---------- live-severity halo ----------
   // The base line already carries the current status colour; this glow just
@@ -828,7 +836,7 @@
   for (const f of canals) {
     const p = f.properties;
     const lv = liveByCanal[p.key];
-    if (!lv || lv.status === 'normal' || lv.status === 'faulty') continue;
+    if (!lv || lv.status === 'normal' || lv.status === 'dry' || lv.status === 'faulty') continue;
     for (const line of toLatLngs(f.geometry.coordinates))
       L.polyline(line, {
         color: LIVE_COLOR[lv.status], weight: haloWeight(p),
@@ -1098,12 +1106,14 @@
 
   // ---------- stats ----------
   const totalKm = canals.reduce((a, f) => a + f.properties.length_km, 0);
-  const highKm = canals.filter(f => f.properties.risk === 3).reduce((a, f) => a + f.properties.length_km, 0);
+  const critKm = canals
+    .filter(f => liveByCanal[f.properties.key]?.status === 'critical')
+    .reduce((a, f) => a + f.properties.length_km, 0);
   function renderStats() {
     document.getElementById('stats').innerHTML =
       `<div class="stat"><b>${canals.length}</b><span>${t('stats_canals')}</span></div>` +
       `<div class="stat"><b>${Math.round(totalKm).toLocaleString()}</b><span>${t('stats_km')}</span></div>` +
-      `<div class="stat"><b>${Math.round(highKm).toLocaleString()}</b><span>${t('stats_km_high')}</span></div>` +
+      `<div class="stat"><b>${Math.round(critKm).toLocaleString()}</b><span>${t('stats_km_crit')}</span></div>` +
       `<div class="stat"><b>${window.STRUCTURES_DATA.length}</b><span>${t('stats_structs')}</span></div>`;
   }
 
@@ -1126,7 +1136,7 @@
     if (!LIVE) { el.classList.add('hidden'); return; }
     const c = LIVE.counts || {};
     const chips = [['critical', c.critical, t('live_cri')], ['warning', c.warning, t('live_war')],
-      ['normal', c.normal, t('live_nor')], ['faulty', c.faulty, t('live_fau')]];
+      ['normal', c.normal, t('live_nor')], ['dry', c.dry, t('live_dry')], ['faulty', c.faulty, t('live_fau')]];
     el.innerHTML =
       `<h2><span class="live-pulse"></span>${t('live_h')}</h2>` +
       `<div class="live-updated"><span class="lbl">${t('live_reading')}:</span> <b>${fmtBangkok(LIVE.latest_reading)}</b><br>` +
@@ -1139,20 +1149,16 @@
 
   // ---------- filters ----------
   function applyFilters() {
-    const on = {
-      3: document.getElementById('f-high').checked,
-      2: document.getElementById('f-med').checked,
-      1: document.getElementById('f-low').checked,
-    };
-    for (const r of [3, 2, 1]) {
-      if (on[r]) map.addLayer(riskLayers[r]); else map.removeLayer(riskLayers[r]);
+    for (const s of STATUS_KEYS) {
+      if (document.getElementById('f-' + s).checked) map.addLayer(statusLayers[s]);
+      else map.removeLayer(statusLayers[s]);
     }
     if (document.getElementById('f-struct').checked) map.addLayer(structLayer);
     else map.removeLayer(structLayer);
     if (document.getElementById('f-live').checked) map.addLayer(liveHalo);
     else map.removeLayer(liveHalo);
   }
-  ['f-high', 'f-med', 'f-low', 'f-struct', 'f-live'].forEach(id =>
+  STATUS_KEYS.map(s => 'f-' + s).concat(['f-struct', 'f-live']).forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilters));
 
   // ---------- canal list & search ----------
@@ -1179,9 +1185,9 @@
           f.properties.name.toLowerCase().includes(q) ||
           (f.properties.name_th || '').includes(lastQuery.trim()))
       : byLength.slice(0, 40);
-    // live-status severity first (critical → warning → rest); within a tier the
-    // original order (length / match sequence) is kept
-    const statusRank = s => (s === 'critical' ? 0 : s === 'warning' ? 1 : 2);
+    // live-status severity first (critical → warning → dry → rest); within a tier
+    // the original order (length / match sequence) is kept
+    const statusRank = s => (s === 'critical' ? 0 : s === 'warning' ? 1 : s === 'dry' ? 2 : 3);
     items = items.sort((a, b) =>
       statusRank(liveByCanal[a.properties.key]?.status) -
       statusRank(liveByCanal[b.properties.key]?.status));
@@ -1195,10 +1201,10 @@
       const p = f.properties;
       const secondary = subName(p);
       const lv = liveByCanal[p.key];
+      const lvTitle = lv ? ` title="${t('live_st_' + lv.status)}"` : '';
       const li = document.createElement('li');
-      li.innerHTML = `<span class="chip" style="background:${RISK_COLOR[p.risk]}"></span>` +
+      li.innerHTML = `<span class="chip" style="background:${displayColor(p)}"${lvTitle}></span>` +
         `<span class="name">${displayName(p)}${secondary ? ` <span class="thai">${secondary}</span>` : ''}</span>` +
-        (lv ? `<span class="livechip" style="background:${LIVE_COLOR[lv.status]}" title="${t('live_st_' + lv.status)}"></span>` : '') +
         `<span class="km">${p.length_km} km</span>`;
       li.addEventListener('click', () => focusCanal(f));
       listEl.appendChild(li);
