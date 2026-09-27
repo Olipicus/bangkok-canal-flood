@@ -1,7 +1,9 @@
 # Bangkok Canals — Flood Situation Map
 
-An interactive map of Bangkok's canal (*khlong*) network, colored by compiled
-flood-risk assessment, to help understand how the city floods and where.
+An interactive map of Bangkok's canal (*khlong*) network, colored by each
+canal's current water-level status (BMA telemetry) with the compiled
+flood-risk assessment as fallback, to help understand how the city floods and
+where.
 
 ![screenshot](screenshot.png)
 
@@ -46,14 +48,15 @@ only the basemap tiles need internet.)
   and every detail panel repeats the reading time of that canal's stations.
   Refresh with `node fetch_live.mjs` (see *Rebuilding the data*). The detail
   panel shows the canal's current status as a badge (critical, warning or
-  normal) and no longer shows a static historical-risk badge; the highlighted
-  route is coloured by each canal's current status, with static risk
-  remaining only where no station reports.
+  normal) and no longer shows a static historical-risk badge; every canal line
+  is coloured by its current status — selected or not, so clicking a canal
+  never changes its colour — with static risk remaining only where no station
+  reports.
 - **Live-situation glow** — canals whose stations currently read above their
-  bank thresholds glow underneath their risk colour (bright red = critical,
-  orange = warning), with a sidebar filter to toggle it. This separates the
-  *current situation* from the *historical rating*: a canal in flood shows the
-  glow even where its compiled risk rating is medium or low.
+  bank thresholds glow underneath their current-status colour (bright red =
+  critical, orange = warning), with a sidebar filter to toggle it. The glow is
+  pure emphasis: it keeps a canal in flood visible among the thinner lines
+  even where its compiled risk rating is medium or low.
 - **Chao Phraya tides** — today's two high / two low tides (m MSD) in the
   sidebar, with the next tide highlighted; fetched via
   `node fetch_flood69.mjs` (see *Rebuilding the data*).
@@ -125,8 +128,8 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
   OSM's `waterway=river` tag alone never implies low risk: many
   outer-province khlongs carry it while behaving like ordinary canals. Where
   the two layers disagree — e.g. an unreviewed canal whose stations now read
-  above the critical bank level — the live glow and the sidebar dots show it,
-  whatever its static colour says.
+  above the critical bank level — the line itself turns the live colour, and
+  the sidebar dots show it, whatever its static rating says.
 - The trace shows the **drainage route** toward the river and out to the Gulf;
   actual flow direction can pause or reverse with the tide, and gates control
   each connection.
