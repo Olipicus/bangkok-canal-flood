@@ -27,7 +27,6 @@
       toggle_panel: 'Toggle panel',
       stats_canals: 'canals', stats_km: 'km total', stats_km_high: 'km high-risk', stats_structs: 'gates / pumps',
       now_prefix: 'Now: ',
-      risk_badge_3: 'History: high risk', risk_badge_2: 'History: medium risk', risk_badge_1: 'History: low risk',
       type_flash: 'Flash flood', type_riverine: 'River flood', type_tidal: 'Tidal', type_mixed: 'Mixed',
       reviewed: 'Reviewed canal',
       route_path: 'Drainage path',
@@ -103,7 +102,6 @@
       toggle_panel: 'สลับแผงข้อมูล',
       stats_canals: 'คลอง', stats_km: 'กม. รวม', stats_km_high: 'กม. เสี่ยงสูง', stats_structs: 'ประตูน้ำ/ปั๊ม',
       now_prefix: 'ขณะนี้: ',
-      risk_badge_3: 'ประวัติ: เสี่ยงสูง', risk_badge_2: 'ประวัติ: เสี่ยงกลาง', risk_badge_1: 'ประวัติ: เสี่ยงต่ำ',
       type_flash: 'น้ำท่วมฉับพลัน', type_riverine: 'น้ำท่วมจากแม่น้ำ', type_tidal: 'น้ำทะเลหนุน', type_mixed: 'ผสม',
       reviewed: 'คลองที่ตรวจสอบข้อมูลแล้ว',
       route_path: 'เส้นทางระบายน้ำ',
@@ -772,9 +770,8 @@
   function detailHtml(p) {
     const badges = [];
     const lvNow = liveByCanal[p.key];
-    if (lvNow && (lvNow.status === 'critical' || lvNow.status === 'warning'))
+    if (lvNow && lvNow.status !== 'faulty')
       badges.push(`<span class="badge live-${lvNow.status}"><span class="live-dot" style="background:${LIVE_COLOR[lvNow.status]}"></span>${t('now_prefix')}${t('live_st_' + lvNow.status)}</span>`);
-    badges.push(`<span class="badge ${RISK_CLASS[p.risk]}">${t('risk_badge_' + p.risk)}</span>`);
     if (p.risk_type) badges.push(`<span class="badge type">${t('type_' + p.risk_type)}</span>`);
     if (p.curated) badges.push(`<span class="badge type">${t('reviewed')}</span>`);
 

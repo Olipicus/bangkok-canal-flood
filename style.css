@@ -212,9 +212,10 @@ body.detail-open.collapsed #trace-chip { left: calc((100% - var(--detail-w)) / 2
 .badge.med { background: rgba(251,140,0,0.15); color: #ffb74d; border: 1px solid var(--med); }
 .badge.low { background: rgba(67,160,71,0.15); color: #81c784; border: 1px solid var(--low); }
 .badge.type { background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); }
-.badge.live-critical, .badge.live-warning { display: inline-flex; align-items: center; gap: 5px; }
+.badge.live-critical, .badge.live-warning, .badge.live-normal { display: inline-flex; align-items: center; gap: 5px; }
 .badge.live-critical { background: rgba(229,57,53,0.3); color: #ff8a80; border: 1px solid var(--high); }
 .badge.live-warning { background: rgba(251,140,0,0.25); color: #ffb74d; border: 1px solid var(--med); }
+.badge.live-normal { background: rgba(67,160,71,0.2); color: #81c784; border: 1px solid var(--low); }
 .pop-note { color: var(--muted); font-size: 12.5px; }
 .pop-meta { color: var(--muted); font-size: 11.5px; margin-top: 8px; }
 .pop-path { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--border); }
