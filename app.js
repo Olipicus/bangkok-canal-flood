@@ -167,7 +167,6 @@
     return other && other !== primary ? other : null;
   };
 
-  const RISK_CLASS = { 3: 'high', 2: 'med', 1: 'low' };
   const RISK_COLOR = { 3: '#e53935', 2: '#fb8c00', 1: '#43a047' };
 
   // ---------- live water-level snapshot (BMA telemetry, refreshed via fetch_live.mjs) ----------
