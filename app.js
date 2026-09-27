@@ -1179,6 +1179,12 @@
           f.properties.name.toLowerCase().includes(q) ||
           (f.properties.name_th || '').includes(lastQuery.trim()))
       : byLength.slice(0, 40);
+    // live-status severity first (critical → warning → rest); within a tier the
+    // original order (length / match sequence) is kept
+    const statusRank = s => (s === 'critical' ? 0 : s === 'warning' ? 1 : 2);
+    items = items.sort((a, b) =>
+      statusRank(liveByCanal[a.properties.key]?.status) -
+      statusRank(liveByCanal[b.properties.key]?.status));
     if (q) items = items.slice(0, 30);
     listEl.innerHTML = '';
     if (!items.length) {
