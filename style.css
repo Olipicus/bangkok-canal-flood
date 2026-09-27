@@ -344,6 +344,7 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
 .loc-list li:hover { background: var(--panel-2); }
 .loc-list .row1 { display: flex; align-items: center; gap: 8px; }
 .loc-list .chip { flex: 0 0 10px; height: 10px; border-radius: 50%; }
+.loc-list .livechip { flex: 0 0 7px; height: 7px; border-radius: 50%; }
 .loc-list .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .loc-list .thai { color: var(--muted); font-size: 11.5px; }
 .loc-list .dist { flex: none; color: var(--accent); font-size: 11.5px; }

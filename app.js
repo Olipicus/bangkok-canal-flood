@@ -692,8 +692,10 @@
       } else {
         connHtml = `<span class="conn-none">${t('loc_noconn')}</span>`;
       }
+      const lvHere = liveByCanal[key];
       return `<li class="loc-item" data-key="${esc(key)}">` +
         `<div class="row1"><span class="chip" style="background:${RISK_COLOR[p.risk]}"></span>` +
+        (lvHere ? `<span class="livechip" style="background:${LIVE_COLOR[lvHere.status]}" title="${t('live_st_' + lvHere.status)}"></span>` : '') +
         `<span class="name">${displayName(p)}${sec ? ` <span class="thai">${sec}</span>` : ''}</span>` +
         `<span class="dist">${fmtDist(it.d)}</span></div>` +
         `<div class="conns"><span class="conn-label">${t('loc_conn')}:</span> ${connHtml}</div></li>`;
@@ -724,7 +726,7 @@
     if (loc) {
       if (loc.keys.has(p.key)) {
         const w = p.key === loc.nearestKey ? 7 : 5;
-        return { color: RISK_COLOR[p.risk], weight: w, opacity: 1, lineCap: 'round' };
+        return { color: displayColor(p), weight: w, opacity: 1, lineCap: 'round' };
       }
       return { color: '#7a8a99', weight: 1, opacity: 0.12, lineCap: 'round' };
     }

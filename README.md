@@ -86,7 +86,9 @@ only the basemap tiles need internet.)
   in the sidebar and the choice persists. The panel lists each nearby canal
   with its direct junctions — every junction is clickable and opens the full
   drainage trace — plus any gates / pumping stations within reach; the dropped
-  pin stays on the map while you explore traces.
+  pin stays on the map while you explore traces. Rows carry the same risk chip
+  plus live-status dot as the main list, and canals inside the radius keep
+  their live colour while above the warning or critical bank level.
 - Searchable canal list, risk-level filters, base-map switcher
 
 ## Canal knowledge wiki (for AI agents)
