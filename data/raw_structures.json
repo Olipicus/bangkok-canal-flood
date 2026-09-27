@@ -1,0 +1,43 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-07-28T02:16:18Z",
+    "timestamp_areas_base": "2026-07-28T02:16:18Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 5630841414,
+  "lat": 13.8544093,
+  "lon": 100.5656111,
+  "tags": {
+    "man_made": "pumping_station",
+    "name": "สถานีสูบน้ำ คลองบางเขนฝั่งใต้",
+    "pumping_station": "wastewater"
+  }
+},
+{
+  "type": "node",
+  "id": 5630963550,
+  "lat": 13.8497780,
+  "lon": 100.5633701,
+  "tags": {
+    "man_made": "pumping_station"
+  }
+},
+{
+  "type": "node",
+  "id": 11251592435,
+  "lat": 13.9067035,
+  "lon": 100.7223164,
+  "tags": {
+    "name": "ประตูระบายน้ำคลองลำแบน",
+    "waterway": "weir"
+  }
+}
+
+  ]
+}

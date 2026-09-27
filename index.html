@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คลองกรุงเทพฯ — แผนที่สถานการณ์น้ำท่วม</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button id="sidebar-toggle" title="สลับแผงข้อมูล">☰</button>
+<button id="help-toggle" aria-controls="help-panel" aria-expanded="false" title="วิธีใช้">?</button>
+
+<div id="help-panel" class="hidden" role="dialog" aria-labelledby="help-title">
+  <div class="help-head">
+    <h2 id="help-title" data-i18n="help_title"></h2>
+    <button id="help-close" type="button" title="ปิด">✕</button>
+  </div>
+  <div class="intro">
+    <p data-i18n="intro_lead"></p>
+    <ul>
+      <li data-i18n="intro_flash"></li>
+      <li data-i18n="intro_river"></li>
+      <li data-i18n="intro_tidal"></li>
+    </ul>
+    <p class="hint" data-i18n="intro_hint"></p>
+  </div>
+</div>
+
+<aside id="sidebar">
+  <header>
+    <div class="title-row">
+      <h1 data-i18n="app_title">คลองกรุงเทพฯ</h1>
+      <div id="lang-toggle" role="group" aria-label="Language / ภาษา">
+        <button id="lang-th" type="button" class="active" title="ไทย">ไทย</button>
+        <button id="lang-en" type="button" title="English">EN</button>
+      </div>
+    </div>
+    <p class="subtitle" data-i18n="subtitle"></p>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="loc-ctl">
+    <h2 data-i18n="loc_h"></h2>
+    <div class="loc-row">
+      <input type="search" id="loc-input" data-i18n-ph="loc_input_ph" autocomplete="off">
+      <button id="loc-go" type="button" data-i18n="loc_btn"></button>
+    </div>
+    <div class="loc-row2">
+      <button id="loc-pick" type="button"><span class="when-off" data-i18n="loc_pick"></span><span class="when-on" data-i18n="loc_pick_active"></span></button>
+      <button id="loc-here" type="button" data-i18n="loc_here"></button>
+    </div>
+    <div class="loc-row3">
+      <label for="loc-radius" data-i18n="loc_radius_label"></label>
+      <select id="loc-radius"></select>
+    </div>
+    <div id="loc-msg" class="loc-msg"></div>
+  </section>
+
+  <section class="controls">
+    <h2 data-i18n="risk_h"></h2>
+    <div class="filters">
+      <label class="risk-filter" data-risk="3"><input type="checkbox" id="f-high" checked><span class="swatch high"></span><span data-i18n="risk_high"></span></label>
+      <label class="risk-filter" data-risk="2"><input type="checkbox" id="f-med" checked><span class="swatch med"></span><span data-i18n="risk_med"></span></label>
+      <label class="risk-filter" data-risk="1"><input type="checkbox" id="f-low" checked><span class="swatch low"></span><span data-i18n="risk_low"></span></label>
+    </div>
+    <label class="struct-filter"><input type="checkbox" id="f-struct" checked>
+      <span data-i18n="structs"></span></label>
+    <input type="search" id="search" data-i18n-ph="search_ph" autocomplete="off">
+    <ul id="canal-list"></ul>
+  </section>
+
+  <section class="live" id="live-panel"></section>
+
+  <footer data-i18n="footer"></footer>
+</aside>
+
+<div id="map"></div>
+<div id="trace-chip" class="hidden"><span id="chip-trace" data-i18n="chip"></span>
+  <span id="chip-loc" class="hidden"></span>
+  <button id="chip-sea" type="button"><span data-i18n="chip_sea"></span></button>
+</div>
+
+<aside id="detail-panel">
+  <header>
+    <h2 data-i18n="details"></h2>
+    <button id="detail-close" type="button" title="ล้างการเลือกและปิด">✕</button>
+  </header>
+  <div id="detail-body"></div>
+</aside>
+
+<script src="vendor/leaflet.js"></script>
+<script src="data/canals_data.js"></script>
+<script src="data/live_status.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
