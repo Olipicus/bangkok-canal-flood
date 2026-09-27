@@ -45,6 +45,14 @@ only the basemap tiles need internet.)
   from** — both the latest station reading and when the snapshot was fetched —
   and every detail panel repeats the reading time of that canal's stations.
   Refresh with `node fetch_live.mjs` (see *Rebuilding the data*).
+- **Live-situation glow** — canals whose stations currently read above their
+  bank thresholds glow underneath their risk colour (bright red = critical,
+  orange = warning), with a sidebar filter to toggle it. This separates the
+  *current situation* from the *historical rating*: a canal in flood shows the
+  glow even where its compiled risk rating is medium or low.
+- **Chao Phraya tides** — today's two high / two low tides (m MSD) in the
+  sidebar, with the next tide highlighted; fetched via
+  `node fetch_flood69.mjs` (see *Rebuilding the data*).
 - **Drainage-path tracing to the sea** — click any canal and the map highlights
   it, dims everything else, and draws an animated path (white dashes plus
   direction arrows pointing downstream) through every connected canal until it
@@ -104,7 +112,15 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
   flood history — not a forecast. The live-status layer is **telemetry readings
   at the snapshot time**, not a warning service: "critical" means the water had
   passed the BMA's critical bank level for that canal when it was read. For
-  live flood warnings use BMA / Thai Government official channels.
+  live flood warnings use BMA / Thai Government official channels. Only the
+  ~35 reviewed corridors carry curated ratings; every other canal gets a
+  regional default (medium) from its centroid, and only true main rivers
+  (Chao Phraya, Tha Chin — map context, not at-risk assets) default to low.
+  OSM's `waterway=river` tag alone never implies low risk: many
+  outer-province khlongs carry it while behaving like ordinary canals. Where
+  the two layers disagree — e.g. an unreviewed canal whose stations now read
+  above the critical bank level — the live glow and the sidebar dots show it,
+  whatever its static colour says.
 - The trace shows the **drainage route** toward the river and out to the Gulf;
   actual flow direction can pause or reverse with the tide, and gates control
   each connection.

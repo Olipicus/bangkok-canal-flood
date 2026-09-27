@@ -135,6 +135,17 @@ h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: v
 .swatch.med { background: var(--med); }
 .swatch.low { background: var(--low); }
 
+/* pulsing dot for the live-status halo filter — mirrors the map glow */
+.live-halo-dot {
+  flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--high);
+  animation: haloPulse 2.2s ease-out infinite;
+}
+@keyframes haloPulse {
+  0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(229, 57, 53, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+}
+
 #search {
   width: 100%; padding: 9px 12px; border-radius: 7px; font-size: 13.5px;
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);

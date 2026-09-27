@@ -44,6 +44,9 @@ const epoch = d => { // "/Date(1790490000000)/" -> ms
   const m = /\/Date\((\d+)\)\//.exec(d || '');
   return m ? +m[1] : null;
 };
+// the feed marks missing levels/thresholds with -99 and occasionally 50 —
+// real bank levels live within a couple of metres of the MSD datum
+const clean = v => (v == null || v === -99 || Math.abs(v) > 10) ? null : v;
 function ptSeg(px, py, [a, b]) {
   const dx = b[0] - a[0], dy = b[1] - a[1];
   const l2 = dx * dx + dy * dy;
@@ -117,7 +120,6 @@ function mapStations(raw) {
     const lat = r.latitude, lon = r.longitude;
     if (!lat || !lon) continue;
     const status = statusOf(r);
-    const level = r.wl_in ?? r.wl_out01 ?? null;
     const ts = epoch(r.site_timestamp);
     const st = {
       code: r.water_code || '',
@@ -125,7 +127,8 @@ function mapStations(raw) {
       name_en: r.water_name_en || r.water_shortname_en || null,
       district: r.district_name || null,
       district_en: r.district_name_en || null,
-      status, level, warning: r.warning ?? null, critical: r.critical ?? null,
+      status, level: clean(r.wl_in ?? r.wl_out01),
+      warning: clean(r.warning), critical: clean(r.critical),
       ts, lat, lon,
     };
     // 1–2) name match (river_name, then the English station name before the comma)
@@ -156,23 +159,26 @@ function mapStations(raw) {
   return { stations, byCanal };
 }
 
-// ---------- aggregate per canal (worst working station wins; latest reading wins) ----------
+// ---------- aggregate per canal ----------
+// One voice per canal: the worst-status station speaks, and its level travels
+// with its own thresholds — mixing one station's status with another's level
+// made popups claim "critical" for a level below the printed threshold.
 function aggregate(byCanal) {
   const out = {};
   for (const [key, sts] of byCanal) {
     const working = sts.filter(s => s.status !== 'faulty');
     const pool = working.length ? working : sts;
-    let worst = 'faulty', latest = 0;
-    let level = null, levelSt = null;
+    let latest = 0, worstRank = -1;
     for (const s of pool) {
-      if (RANK[s.status] > RANK[worst]) worst = s.status;
       if ((s.ts || 0) > latest) latest = s.ts || 0;
-      if (s.level != null && (level == null || s.level > level)) { level = s.level; levelSt = s; }
+      if (RANK[s.status] > worstRank) worstRank = RANK[s.status];
     }
+    const worstSts = pool.filter(s => RANK[s.status] === worstRank);
+    const rep = worstSts.find(s => s.level != null) || worstSts[0];
     out[key] = {
-      status: worst,
-      level, warning: levelSt?.warning ?? null, critical: levelSt?.critical ?? null,
-      station: levelSt?.code ?? null,
+      status: rep?.status ?? 'faulty',
+      level: rep?.level ?? null, warning: rep?.warning ?? null, critical: rep?.critical ?? null,
+      station: rep?.code ?? null,
       ts: latest,
       stations: sts.map(s => s.code),
     };

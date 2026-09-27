@@ -73,6 +73,7 @@
       live_near: 'nearby station',
       live_none: 'No BMA telemetry station on this canal.',
       live_more: '+{n} more stations',
+      live_halo: 'Above bank threshold now (live)',
       tide_h: 'Tides today · Chao Phraya River',
       tide_high: 'High', tide_low: 'Low', tide_unit: 'm (MSD)',
       tide_src: `Tide prediction from the BMA Drainage and Sewerage Department, fetched via the People's Party flood portal (<a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>).`,
@@ -147,6 +148,7 @@
       live_near: 'สถานีใกล้คลอง',
       live_none: 'ไม่มีสถานีตรวจวัดของ กทม. บนคลองนี้',
       live_more: '+อีก {n} สถานี',
+      live_halo: 'น้ำเกินเกณฑ์ตอนนี้ (สด)',
       tide_h: 'น้ำขึ้น–น้ำลงวันนี้ · เจ้าพระยา',
       tide_high: 'น้ำขึ้น', tide_low: 'น้ำลง', tide_unit: 'ม.รทก.',
       tide_src: 'พยากรณ์น้ำขึ้น-น้ำลงจากสำนักการระบายน้ำ กทม. ดึงผ่านเว็บติดตามน้ำท่วมของพรรคประชาชน (<a href="https://flood69.peoplesparty.or.th" target="_blank" rel="noopener">flood69.peoplesparty.or.th</a>)',
@@ -726,6 +728,9 @@
   }
   function refreshCanalStyles() {
     for (const [f, layer] of featureToLayer) layer.setStyle(styleFor(f.properties));
+    // the situation glow competes with a trace/loc selection — fade it while one is active
+    const pane = map.getPane('liveHalo');
+    if (pane) pane.style.opacity = (trace || loc) ? 0.15 : '';
   }
 
   // ---------- detail panel content ----------
@@ -799,6 +804,27 @@
     featureToLayer.set(f, layer);
   }
   Object.values(riskLayers).forEach(l => l.addTo(map));
+
+  // ---------- live-severity halo ----------
+  // Static risk keeps the base colour; this glow marks the *current* situation
+  // from the telemetry snapshot, so a canal in flood is visible even where the
+  // historical rating is medium/low (most canals carry no curated history).
+  const haloPane = map.createPane('liveHalo');
+  haloPane.style.zIndex = 390; // under the canal lines (overlayPane = 400)
+  const liveHalo = L.layerGroup();
+  const haloWeight = p => Math.min(6, 1.8 + Math.sqrt(p.length_km) * 0.8) + 7;
+  for (const f of canals) {
+    const p = f.properties;
+    const lv = liveByCanal[p.key];
+    if (!lv || lv.status === 'normal' || lv.status === 'faulty') continue;
+    for (const line of toLatLngs(f.geometry.coordinates))
+      L.polyline(line, {
+        color: LIVE_COLOR[lv.status], weight: haloWeight(p),
+        opacity: lv.status === 'critical' ? 0.42 : 0.28,
+        interactive: false, pane: 'liveHalo',
+      }).addTo(liveHalo);
+  }
+  liveHalo.addTo(map);
 
   // ---------- structures ----------
   const structLayer = L.layerGroup();
@@ -1111,8 +1137,10 @@
     }
     if (document.getElementById('f-struct').checked) map.addLayer(structLayer);
     else map.removeLayer(structLayer);
+    if (document.getElementById('f-live').checked) map.addLayer(liveHalo);
+    else map.removeLayer(liveHalo);
   }
-  ['f-high', 'f-med', 'f-low', 'f-struct'].forEach(id =>
+  ['f-high', 'f-med', 'f-low', 'f-struct', 'f-live'].forEach(id =>
     document.getElementById(id).addEventListener('change', applyFilters));
 
   // ---------- canal list & search ----------

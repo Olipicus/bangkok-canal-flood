@@ -203,7 +203,15 @@ for (const [key, segs] of groups) {
     if (hitIdx >= 0) curatedHit.add(hitIdx);
     if (risk === null) {
       const lon = centroid[0], lat = centroid[1];
-      if (first.waterway === 'river') { risk = 1; riskType = 'riverine'; }
+      // Main rivers (Chao Phraya, Tha Chin, …) are map context rather than
+      // at-risk assets — keep them low. Every other river-TAGGED waterway is
+      // just a khlong OSM happens to call `waterway=river` (old river arms,
+      // eastern floodplain channels); giving them the regional default like
+      // any canal — the old "tagged river → low risk" rule painted genuinely
+      // flooding khlongs green.
+      const mainRiver = first.waterway === 'river' &&
+        (/\briver\b/i.test(nameEn) || (nameTh || '').includes('แม่น้ำ'));
+      if (mainRiver) { risk = 1; riskType = 'riverine'; }
       else if (lat > 13.95) { risk = 2; riskType = 'riverine'; } // Pathum Thani / Ayutthaya side
       else if (lon > 100.62) { risk = 2; riskType = 'riverine'; }
       else if (lon < 100.47) { risk = 2; riskType = 'tidal'; }
