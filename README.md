@@ -116,10 +116,11 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
   that contains a Bangkok canal (key snapshot in `data/bangkok_keys.json`).
   Chao Phraya centerline fetched the same way as the drainage sink.
 - Live water levels: © Bangkok Metropolitan Administration, Drainage and
-  Sewerage Department telemetry — <https://weather.bangkok.go.th/water>.
+  Sewerage Department telemetry — <https://weather.bangkok.go.th/water>
+  (Summary page as the primary feed, the KlongMap map endpoint as fallback).
   Stations attach to canals by name (`river_name` → the canal's Thai/English
   name), with a nearest-canal fallback within 200 m for stations whose canal
-  isn't named in OSM (shown as "nearby station" in the UI). ~290 of ~312
+  isn't named in OSM (shown as "nearby station" in the UI). ~288 of ~312
   stations map onto 150+ canals; retention ponds and ditches off the network
   only count toward the citywide totals.
 - Water statuses (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) are **telemetry readings at
@@ -127,8 +128,10 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
   passed the BMA's critical bank level for that canal when it was read, and
   "low water" means it sat below the BMA's dry threshold (a condition you only
   see in the dry season). The classification mirrors
-  flood69.peoplesparty.or.th level-for-level; stations without mirror data
-  fall back to BMA's own reported status. For live flood warnings use BMA /
+  flood69.peoplesparty.or.th level-for-level; the flood69 mirror is also the
+  only feed carrying the dry threshold. Each station's snapshot record flags
+  whether the computed status agrees with BMA's own reported flood status.
+  For live flood warnings use BMA /
   Thai Government official channels.
 - The trace shows the **drainage route** toward the river and out to the Gulf;
   actual flow direction can pause or reverse with the tide, and gates control
@@ -162,19 +165,25 @@ node fetch_flood69.mjs # BMA tides via flood69 → data/flood69.js (sidebar tide
 (Douglas-Peucker), computes lengths, and attaches the curated risk table
 (`CURATED` in the script). Edit the curated entries there to refine ratings.
 
-`fetch_live.mjs` pulls every station from the BMA's own page endpoint
+`fetch_live.mjs` synthesizes one record per station from three feeds keyed by
+station code, then maps them onto the canal network and writes
+`data/live_status.js`. The **primary source** is BMA's own Summary page
+(`GET weather.bangkok.go.th/water/Summary`, which embeds a 304-station JSON
+array with clean levels, warning/critical thresholds, bank levels, daily maxima
+and RTU device health). The **flood69 mirror** is overlaid for everything the
+Summary page lacks — the low-water threshold (`dry_in` + `checkdry`) and
+pump/gate activity — and covers the handful of stations the Summary page
+doesn't carry. BMA's old map endpoint
 (`POST weather.bangkok.go.th/water/PageMap/GoogleMap` — it 403s without a
 session cookie and a browser User-Agent, and sends no CORS headers, which is
-why the site ships a generated snapshot instead of fetching live), maps the
-stations onto the canal network, and writes `data/live_status.js`. To classify
-stations into วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ it also reads the flood69
-mirror's station records (same station codes) for the low-water threshold
-(`dry_in` + `checkdry`) that BMA's page endpoint doesn't expose, then applies
-flood69's own algorithm: level < dry threshold → dry, ≥ critical → critical,
-≥ warning → warning, else normal (falling back to BMA's reported status where
-the mirror has no record). Re-run it
-whenever you want fresher readings — the sidebar always shows how old the
-snapshot is.
+why the site ships a generated snapshot instead of fetching live) remains the
+last resort for codes absent from both. Statuses follow flood69's algorithm:
+level < dry threshold → dry, ≥ critical → critical, ≥ warning → warning, else
+normal; stations with tripped telemetry (breaker / RTU door) or no reading are
+faulty. Each station also records `status_agrees` — whether the computed status
+matches BMA's reported `water_status_flood` (1=normal 2=warning 3=critical);
+the computed status stays authoritative when they differ. Re-run it whenever
+you want fresher readings — the sidebar always shows how old the snapshot is.
 
 `fetch_flood69.mjs` adds today's Chao Phraya tide prediction (two high / two
 low tides, m MSD) to the sidebar. It reads the People's Party flood portal
