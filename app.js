@@ -962,7 +962,8 @@
     if (!lv) return `<div class="pop-live none">${t('live_none')}</div>`;
     const head =
       `<div class="live-head"><span class="live-dot" style="background:${LIVE_COLOR[lv.status]}"></span>${t('live_st_' + lv.status)}</div>` +
-      (lv.level != null
+      // a fully faulty canal's aggregate "level" is a frozen reading, not a live one
+      (lv.status !== 'faulty' && lv.level != null
         ? `<div class="live-levels">${t('live_level')}: <b>${lv.level.toFixed(2)}</b> ${t('live_unit')}` +
           (lv.warning != null ? ` · ${t('live_warn')} ${lv.warning}` : '') +
           (lv.critical != null ? ` · ${t('live_crit')} ${lv.critical}` : '') +
@@ -991,7 +992,8 @@
     const shown = sts.slice(0, 4);
     const stationLine = s =>
       `${esc(stationName(s))} — ` +
-      (s.level != null ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short')) +
+      (s.status !== 'faulty' && s.level != null
+        ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short')) +
       (s.match === 'near' ? ` <span class="st-near">(${t('live_near')})</span>` : '');
     return `<div class="pop-live" style="border-left-color:${LIVE_COLOR[lv.status]}">` + head +
       (shown.length
