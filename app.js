@@ -1057,7 +1057,10 @@
   // reach by reach even before anything is selected
   // every layer carrying a canal tooltip (hit + visible) — retranslated on language change
   const tipLayers = [];
-  let hoverTimer = null;
+  // one pending un-highlight per canal — a single shared timer let the next
+  // canal's mouseover cancel the previous canal's clear-off when the pointer
+  // slid straight from one line onto another, leaving the old highlight stuck
+  const hoverTimers = new Map();
   function applyHover(f, on) {
     (featureToLayer.get(f) || []).forEach((layer, i) => {
       const st = layerStyle(f, i);
@@ -1070,16 +1073,24 @@
     const secs = sectionsByCanal.get(key);
     // every geom is an array of [lon, lat] lines: one per reach, or all parts
     const geoms = secs ? secs.list.map(sec => [sec.line]) : [f.geometry.coordinates];
-  // every layer carrying a canal tooltip (hit + visible) — retranslated on language change
-  const tipLayers = [];
-  const wireCanal = layer => {
-    layer.bindTooltip(canalTipHtml(p), { sticky: true, className: 'canal-tip', direction: 'top' });
-    tipLayers.push({ layer, p });
+    const wireCanal = layer => {
+      layer.bindTooltip(canalTipHtml(p), { sticky: true, className: 'canal-tip', direction: 'top' });
+      tipLayers.push({ layer, p });
       layer.on('click', () => selectCanal(key));
-      layer.on('mouseover', () => { clearTimeout(hoverTimer); applyHover(f, true); });
+      layer.on('mouseover', () => {
+        clearTimeout(hoverTimers.get(f));
+        hoverTimers.delete(f);
+        applyHover(f, true);
+      });
       // sliding across a reach boundary fires out+in — debounce so the
       // whole-canal highlight doesn't flicker at the seams
-      layer.on('mouseout', () => { clearTimeout(hoverTimer); hoverTimer = setTimeout(() => applyHover(f, false), 60); });
+      layer.on('mouseout', () => {
+        clearTimeout(hoverTimers.get(f));
+        hoverTimers.set(f, setTimeout(() => {
+          hoverTimers.delete(f);
+          applyHover(f, false);
+        }, 60));
+      });
     };
     // the drawn lines are 1–7px and nearly impossible to hit when dimmed, so
     // each one also gets an invisible fat stroke as its click target (opacity 0
@@ -1494,6 +1505,9 @@
 
   // ---------- filters ----------
   function applyFilters() {
+    // removing a layer group under the cursor never fires mouseout — reset the
+    // hover highlight so re-adding the group doesn't bring a stuck thick line back
+    refreshCanalStyles();
     for (const s of STATUS_KEYS) {
       if (document.getElementById('f-' + s).checked) map.addLayer(statusLayers[s]);
       else map.removeLayer(statusLayers[s]);
