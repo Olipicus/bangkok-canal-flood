@@ -108,6 +108,7 @@ section, footer { padding: 14px 20px; border-bottom: 1px solid var(--border); }
 .dot.flash { background: var(--high); }
 .dot.riverine { background: #8e6fd8; }
 .dot.tidal { background: var(--accent); }
+.dot.mixed { background: linear-gradient(90deg, var(--high), #8e6fd8, var(--accent)); }
 
 /* ---------- stats ---------- */
 .stats { display: flex; gap: 8px; }
