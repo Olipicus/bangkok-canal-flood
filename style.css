@@ -579,11 +579,14 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
     overflow-y: auto;
   }
 
-  /* status chip sits under the buttons and may wrap */
+  /* status chip shares the top row with the floating buttons — anchored
+     right of them so a wrapping message never covers the buttons */
   #trace-chip {
-    top: calc(66px + env(safe-area-inset-top));
-    left: 50% !important;
-    max-width: calc(100vw - 20px);
+    top: calc(12px + env(safe-area-inset-top));
+    left: auto !important;
+    right: max(12px, env(safe-area-inset-right));
+    transform: none;
+    max-width: calc(100vw - 128px);
     white-space: normal; text-align: center; line-height: 1.45;
     font-size: 12px; padding: 7px 12px;
   }
