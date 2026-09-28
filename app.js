@@ -22,7 +22,6 @@
       search_ph: 'Search canal… e.g. Saen Saep / แสนแสบ',
       footer: `Canal geometry © OpenStreetMap contributors. Water status (critical / warning / normal / low water) is computed from live BMA drainage-telemetry readings against BMA's own thresholds — the same levels shown on flood69.peoplesparty.or.th — at the snapshot time shown; canals without a station stay grey. For actual alerts, follow BMA / Thai Government channels.`,
       sel_count: '{n} canals selected',
-      chip_sea: '🌊 to the sea', chip_sea_title: 'Fly to the river mouth',
       details: 'Details', detail_close_title: 'Clear selection and close',
       detail_collapse: 'Collapse panel', detail_expand: 'Expand panel',
       toggle_panel: 'Toggle panel',
@@ -100,7 +99,6 @@
       search_ph: 'ค้นหาคลอง… เช่น แสนแสบ / Saen Saep',
       footer: 'เรขาคณิตคลอง © OpenStreetMap contributors สถานะน้ำในคลอง (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) คำนวณจากค่าระดับน้ำสดของสำนักการระบายน้ำ กทม. เทียบเกณฑ์ของ กทม. เอง — ระดับเดียวกับที่แสดงบน flood69.peoplesparty.or.th — ตามเวลา snapshot คลองที่ไม่มีสถานีแสดงเป็นสีเทา สำหรับการแจ้งเตือนจริง โปรดติดตามประกาศของ กทม. / หน่วยงานราชการ',
       sel_count: 'เลือกอยู่ {n} คลอง',
-      chip_sea: '🌊 ไปทางออกทะเล', chip_sea_title: 'บินไปยังปากแม่น้ำ',
       details: 'รายละเอียด', detail_close_title: 'ล้างการเลือกและปิด',
       detail_collapse: 'หุบแผงข้อมูล', detail_expand: 'กางแผงข้อมูล',
       toggle_panel: 'สลับแผงข้อมูล',
@@ -238,7 +236,6 @@
   // own computed drainage trace; Esc / empty-map click clears them all
   let selected = []; // ordered selected canal keys (most recent last)
   const traceCache = new Map(); // key -> { startKey, pathKeys, riverPt, ... }
-  const lastTrace = () => (selected.length ? traceCache.get(selected[selected.length - 1]) : null);
   const locLayer = L.layerGroup().addTo(map);
   let loc = null; // location-lookup state: { latlng, items, structs, keys, nearestKey, outside }
   let LOC_RADIUS_M = 2000; // adjustable via the sidebar select, persisted in localStorage
@@ -1158,15 +1155,10 @@
   // ---------- selection / trace control ----------
   const chip = document.getElementById('trace-chip');
   const chipLoc = document.getElementById('chip-loc');
-  const chipSea = document.getElementById('chip-sea');
+  // the chip only carries the loc-mode hint now — trace mode shows nothing
   function showChip(mode) {
-    chip.classList.remove('hidden');
-    const traceMode = mode === 'trace';
-    // trace mode keeps only the fly-to-sea button; the pill chrome is for the loc message
-    chip.classList.toggle('btn-only', traceMode);
-    chipLoc.classList.toggle('hidden', traceMode);
-    chipSea.classList.toggle('hidden', !traceMode);
-    if (!traceMode) chipLoc.textContent = t('loc_chip');
+    chip.classList.toggle('hidden', mode === 'trace');
+    if (mode !== 'trace') chipLoc.textContent = t('loc_chip');
   }
   const panel = document.getElementById('detail-panel');
   const panelBody = document.getElementById('detail-body');
@@ -1316,10 +1308,6 @@
     clearSelection();
   });
   document.getElementById('detail-close').addEventListener('click', clearSelection);
-  document.getElementById('chip-sea').addEventListener('click', () => {
-    const tr = lastTrace();
-    if (tr && tr.mouth) map.flyTo(tr.mouth, 12.5, { duration: 1.2 });
-  });
 
   // ---------- location lookup UI ----------
   let pickMode = false;
@@ -1583,7 +1571,6 @@
     document.getElementById('sidebar-toggle').title = t('toggle_panel');
     document.getElementById('sidebar-close').title = t('sidebar_close_title');
     document.getElementById('detail-close').title = t('detail_close_title');
-    document.getElementById('chip-sea').title = t('chip_sea_title');
     document.getElementById('help-toggle').title = t('help_btn_title');
     document.getElementById('help-close').title = t('help_close_title');
     document.getElementById('lang-th').classList.toggle('active', lang === 'th');

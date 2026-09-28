@@ -238,16 +238,6 @@ body.detail-open.collapsed #trace-chip { left: calc((100% - var(--detail-w)) / 2
 }
 #trace-chip.hidden { display: none; }
 body.collapsed #trace-chip { left: 50%; }
-#chip-sea {
-  pointer-events: auto; cursor: pointer; margin-left: 10px;
-  background: var(--panel-2); color: var(--accent);
-  border: 1px solid var(--accent); border-radius: 14px;
-  padding: 3px 10px; font-size: 12px; font-weight: 600;
-}
-#chip-sea:hover { background: var(--accent); color: var(--bg); }
-/* trace mode: only the fly-to-sea button remains, without the pill around it */
-#trace-chip.btn-only { background: none; border: 0; padding: 0; box-shadow: none; }
-#trace-chip.btn-only #chip-sea { margin-left: 0; }
 
 .flow-dash {
   stroke-dasharray: 5 9;
@@ -591,8 +581,6 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
     white-space: normal; text-align: center; line-height: 1.45;
     font-size: 12px; padding: 7px 12px;
   }
-  /* "go to the sea" shortcut is desktop-only */
-  #chip-sea { display: none; }
 
   /* 16px inputs keep iOS Safari from zooming the page on focus */
   #search, #loc-input, #loc-radius { font-size: 16px; }
