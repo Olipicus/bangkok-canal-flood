@@ -56,10 +56,16 @@ const events = [
 // station counters are informational only (no coordinates to map them with)
 const stations = data.waterStation || [];
 const reporting = stations.filter(s => epoch(s.water_level_last?.site_timestamp));
-const latestReading = reporting.reduce((a, s) => Math.max(a, epoch(s.water_level_last.site_timestamp)), 0);
+// source feeds can stamp a reading minutes into the future — cap at fetch time
+// so "อ่านค่าล่าสุด" never shows a time that hasn't happened yet
+const fetchedAt = Date.now();
+const latestReading = reporting.reduce((a, s) => {
+  const t = epoch(s.water_level_last.site_timestamp);
+  return (t && t <= fetchedAt) ? Math.max(a, t) : a;
+}, 0);
 
 const out = {
-  fetched_at: Date.now(),
+  fetched_at: fetchedAt,
   live_proxy: live, // true = /api/klongmap, false = static snapshot fallback
   source: 'flood69.peoplesparty.or.th · พยากรณ์น้ำขึ้น-น้ำลงจากสำนักการระบายน้ำ กทม. (weather.bangkok.go.th/KlongMap)',
   tide: events.length ? { date: epoch(dh.date_stamp), events } : null,

@@ -483,7 +483,11 @@ const byCanalAgg = aggregate(byCanal);
 
 const counts = { critical: 0, warning: 0, normal: 0, dry: 0, faulty: 0 };
 for (const s of stations) counts[s.status]++;
-const latestReading = stations.reduce((a, s) => Math.max(a, s.ts || 0), 0);
+  // BMA occasionally stamps a reading minutes into the future (clock-skewed
+  // RTU / pre-stamped telemetry slot) — cap the header stamp at fetch time so
+  // "อ่านค่าล่าสุด" can't show a time that hasn't happened yet
+  const fetchedAt = Date.now();
+  const latestReading = stations.reduce((a, s) => (s.ts && s.ts <= fetchedAt) ? Math.max(a, s.ts) : a, 0);
 const nameHits = stations.filter(s => s.match === 'name').length;
 const nearHits = stations.filter(s => s.match === 'near').length;
 const bySource = { summary: 0, flood69: 0, pagemap: 0 };
@@ -492,7 +496,7 @@ const agreesDist = { true: 0, false: 0, null: 0 };
 for (const s of stations) agreesDist[String(s.status_agrees)]++;
 
 const out = {
-  fetched_at: Date.now(),
+  fetched_at: fetchedAt,
   latest_reading: latestReading,
   source: 'BMA Drainage and Sewerage Department telemetry · สำนักการระบายน้ำ กรุงเทพมหานคร (weather.bangkok.go.th/water)',
   counts, stations_total: stations.length,
