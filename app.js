@@ -21,7 +21,6 @@
       select_all: 'Select all canals',
       search_ph: 'Search canal… e.g. Saen Saep / แสนแสบ',
       footer: `Canal geometry © OpenStreetMap contributors. Water status (critical / warning / normal / low water) is computed from live BMA drainage-telemetry readings against BMA's own thresholds — the same levels shown on flood69.peoplesparty.or.th — at the snapshot time shown; canals without a station stay grey. For actual alerts, follow BMA / Thai Government channels.`,
-      chip: 'Drainage paths to the sea shown — click canals to add or remove them; empty map or Esc clears all',
       sel_count: '{n} canals selected',
       chip_sea: '🌊 to the sea', chip_sea_title: 'Fly to the river mouth',
       details: 'Details', detail_close_title: 'Clear selection and close',
@@ -100,7 +99,6 @@
       select_all: 'เลือกคลองทั้งหมด',
       search_ph: 'ค้นหาคลอง… เช่น แสนแสบ / Saen Saep',
       footer: 'เรขาคณิตคลอง © OpenStreetMap contributors สถานะน้ำในคลอง (วิกฤต / เตือนภัย / ปกติ / น้ำต่ำ) คำนวณจากค่าระดับน้ำสดของสำนักการระบายน้ำ กทม. เทียบเกณฑ์ของ กทม. เอง — ระดับเดียวกับที่แสดงบน flood69.peoplesparty.or.th — ตามเวลา snapshot คลองที่ไม่มีสถานีแสดงเป็นสีเทา สำหรับการแจ้งเตือนจริง โปรดติดตามประกาศของ กทม. / หน่วยงานราชการ',
-      chip: 'กำลังแสดงเส้นทางระบายน้ำสู่ทะเล — คลิกคลองเพื่อเพิ่มหรือเอาออก คลิกพื้นที่ว่าง หรือกด Esc เพื่อล้างทั้งหมด',
       sel_count: 'เลือกอยู่ {n} คลอง',
       chip_sea: '🌊 ไปทางออกทะเล', chip_sea_title: 'บินไปยังปากแม่น้ำ',
       details: 'รายละเอียด', detail_close_title: 'ล้างการเลือกและปิด',
@@ -243,8 +241,8 @@
   const lastTrace = () => (selected.length ? traceCache.get(selected[selected.length - 1]) : null);
   const locLayer = L.layerGroup().addTo(map);
   let loc = null; // location-lookup state: { latlng, items, structs, keys, nearestKey, outside }
-  let LOC_RADIUS_M = 500; // adjustable via the sidebar select, persisted in localStorage
-  const LOC_RADII = [200, 500, 1000, 2000, 5000];
+  let LOC_RADIUS_M = 2000; // adjustable via the sidebar select, persisted in localStorage
+  const LOC_RADII = [200, 500, 1000, 2000, 5000, 10000];
   const riverKey = canals.find(f => f.properties.waterway === 'river')?.properties.key || null;
 
   // ---------- geometry helpers ----------
@@ -1159,13 +1157,13 @@
 
   // ---------- selection / trace control ----------
   const chip = document.getElementById('trace-chip');
-  const chipTrace = document.getElementById('chip-trace');
   const chipLoc = document.getElementById('chip-loc');
   const chipSea = document.getElementById('chip-sea');
   function showChip(mode) {
     chip.classList.remove('hidden');
     const traceMode = mode === 'trace';
-    chipTrace.classList.toggle('hidden', !traceMode);
+    // trace mode keeps only the fly-to-sea button; the pill chrome is for the loc message
+    chip.classList.toggle('btn-only', traceMode);
     chipLoc.classList.toggle('hidden', traceMode);
     chipSea.classList.toggle('hidden', !traceMode);
     if (!traceMode) chipLoc.textContent = t('loc_chip');

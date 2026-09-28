@@ -245,6 +245,9 @@ body.collapsed #trace-chip { left: 50%; }
   padding: 3px 10px; font-size: 12px; font-weight: 600;
 }
 #chip-sea:hover { background: var(--accent); color: var(--bg); }
+/* trace mode: only the fly-to-sea button remains, without the pill around it */
+#trace-chip.btn-only { background: none; border: 0; padding: 0; box-shadow: none; }
+#trace-chip.btn-only #chip-sea { margin-left: 0; }
 
 .flow-dash {
   stroke-dasharray: 5 9;
