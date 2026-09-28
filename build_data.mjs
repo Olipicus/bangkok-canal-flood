@@ -201,23 +201,9 @@ for (const [key, segs] of groups) {
       risk = r; riskType = ty; note = nt; noteTh = ntTh; hitIdx = rowIdx; break;
     }
     if (hitIdx >= 0) curatedHit.add(hitIdx);
-    if (risk === null) {
-      const lon = centroid[0], lat = centroid[1];
-      // Main rivers (Chao Phraya, Tha Chin, …) are map context rather than
-      // at-risk assets — keep them low. Every other river-TAGGED waterway is
-      // just a khlong OSM happens to call `waterway=river` (old river arms,
-      // eastern floodplain channels); giving them the regional default like
-      // any canal — the old "tagged river → low risk" rule painted genuinely
-      // flooding khlongs green.
-      const mainRiver = first.waterway === 'river' &&
-        (/\briver\b/i.test(nameEn) || (nameTh || '').includes('แม่น้ำ'));
-      if (mainRiver) { risk = 1; riskType = 'riverine'; }
-      else if (lat > 13.95) { risk = 2; riskType = 'riverine'; } // Pathum Thani / Ayutthaya side
-      else if (lon > 100.62) { risk = 2; riskType = 'riverine'; }
-      else if (lon < 100.47) { risk = 2; riskType = 'tidal'; }
-      else { risk = 2; riskType = 'flash'; }
-      note = null;
-    }
+    // No geographic fallback: canals absent from CURATED stay unclassified
+    // (risk/risk_type null). Guessing a driver from coordinates painted the
+    // "river flood" label on canals nobody reviewed.
 
     features.push({
       type: 'Feature',
@@ -249,16 +235,24 @@ console.log(`canals: ${features.length}, total km: ${Math.round(features.reduce(
 
 // ---------- structures ----------
 const structs = [];
+let skippedStructs = 0;
 for (const n of rawStruct.elements) {
   if (!n.lat) continue;
   const t = n.tags || {};
+  // kind must come from OSM's own evidence — never defaulted, or an untagged
+  // node would silently become a "weir"
+  const kind = t.man_made === 'sluice_gate' ? 'gate'
+    : t.man_made === 'pumping_station' ? 'pump'
+    : t.waterway === 'weir' ? 'weir' : null;
+  if (!kind) { skippedStructs++; continue; }
   structs.push({
     name: t['name:en'] || t.name || 'Flood-control structure',
     name_th: THAI.test(t.name || '') ? t.name : null,
-    kind: t.man_made === 'sluice_gate' ? 'gate' : (t.man_made === 'pumping_station' ? 'pump' : 'weir'),
+    kind,
     lat: n.lat, lon: n.lon, accuracy: 'exact (OSM)',
   });
 }
+if (skippedStructs) console.log(`structures skipped (no OSM kind evidence): ${skippedStructs}`);
 // curated well-known points (approximate locations) — [en, th, kind, lat, lon, note EN, accuracy, note TH]
 const CURATED_STRUCTS = [
   ['Khlong Saen Saep head gate', 'ประตูระบายน้ำคลองแสนแสบ (ต้นคลอง)', 'gate', 13.7520, 100.5024, 'Controls the canal head at Phan Fa Lilat, keeping canal water out of the old city moats; sandbagged in 2011.', 'approximate',
