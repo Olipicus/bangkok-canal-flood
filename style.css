@@ -290,7 +290,6 @@ body.collapsed #trace-chip { left: 50%; }
   margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--border);
 }
 .canal-tip .tip-live .live-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; }
-.canal-tip .tip-live.none { color: var(--muted); }
 .leaflet-tooltip.sea-tip { color: #b2ebf2; border-color: #26c6da; white-space: nowrap; }
 
 /* vendor/leaflet.css points at images/layers.png, which isn't shipped —

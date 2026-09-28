@@ -1043,20 +1043,15 @@
   }
 
   // ---------- canal layers ----------
-  // hover tooltip: canal name + the current water level from the live snapshot
-  // (a faulty gauge shows ขัดข้อง, never its frozen last reading; the river
-  // itself carries no gauge here, so it keeps the name-only tooltip)
+  // hover tooltip: canal name + the current water level from the live snapshot;
+  // canals without a working gauge show nothing extra (never a frozen reading)
   function canalTipHtml(p) {
-    const lv = p.waterway === 'river' ? null : liveByCanal[p.key || p.name];
-    let live;
-    if (!lv) live = `<div class="tip-live none">${t('live_none')}</div>`;
-    else {
-      const faulty = lv.status === 'faulty';
-      const lvl = !faulty && lv.level != null ? ` · ${lv.level.toFixed(2)} ${t('live_unit')}` : '';
-      live = `<div class="tip-live"><span class="live-dot" style="background:${LIVE_COLOR[lv.status]}"></span>` +
-        (faulty ? t('live_faulty_short') : t('live_st_' + lv.status)) + lvl + `</div>`;
-    }
-    return `<div class="tip-name">${displayName(p)}</div>${live}`;
+    const name = `<div class="tip-name">${displayName(p)}</div>`;
+    const lv = liveByCanal[p.key || p.name];
+    if (!lv || lv.status === 'faulty' || lv.level == null) return name;
+    return name +
+      `<div class="tip-live"><span class="live-dot" style="background:${LIVE_COLOR[lv.status]}"></span>` +
+      `${t('live_st_' + lv.status)} · ${lv.level.toFixed(2)} ${t('live_unit')}</div>`;
   }
   // multi-gauge canals become one polyline per reach so their colours read
   // reach by reach even before anything is selected
@@ -1073,8 +1068,11 @@
     const secs = sectionsByCanal.get(key);
     // every geom is an array of [lon, lat] lines: one per reach, or all parts
     const geoms = secs ? secs.list.map(sec => [sec.line]) : [f.geometry.coordinates];
-    const wireCanal = layer => {
-      layer.bindTooltip(canalTipHtml(p), { sticky: true, className: 'canal-tip', direction: 'top' });
+  // every layer carrying a canal tooltip (hit + visible) — retranslated on language change
+  const tipLayers = [];
+  const wireCanal = layer => {
+    layer.bindTooltip(canalTipHtml(p), { sticky: true, className: 'canal-tip', direction: 'top' });
+    tipLayers.push({ layer, p });
       layer.on('click', () => selectCanal(key));
       layer.on('mouseover', () => { clearTimeout(hoverTimer); applyHover(f, true); });
       // sliding across a reach boundary fires out+in — debounce so the
@@ -1609,8 +1607,7 @@
     renderList(lastQuery);
     if (layerCtl) map.removeControl(layerCtl);
     layerCtl = L.control.layers({ [t('layer_osm')]: osm, [t('layer_esri')]: esriGray }, null, { position: 'bottomright' }).addTo(map);
-    for (const [f, layers] of featureToLayer)
-      for (const layer of layers) layer.setTooltipContent(canalTipHtml(f.properties));
+    for (const { layer, p } of tipLayers) layer.setTooltipContent(canalTipHtml(p));
     for (const { s, m } of structMarkers) m.setTooltipContent(displayName(s));
     if (selected.length) drawTrace(); // rebuild river/sea tooltips in the new language
     updateChip();
