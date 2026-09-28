@@ -1167,6 +1167,8 @@
     if (canSelectAll) {
       chipSelAllBox.checked = loc.items.every(it => selected.includes(it.f.properties.key || it.f.properties.name));
     }
+    // nothing but the "my location" button → drop the pill chrome around it
+    chip.classList.toggle('bare', chipLoc.classList.contains('hidden') && !canSelectAll);
   }
   const panel = document.getElementById('detail-panel');
   const panelBody = document.getElementById('detail-body');

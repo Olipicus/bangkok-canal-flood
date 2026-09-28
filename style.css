@@ -238,6 +238,20 @@ body.detail-open.collapsed #trace-chip { left: calc((100% - var(--detail-w)) / 2
 }
 #trace-chip.hidden { display: none; }
 body.collapsed #trace-chip { left: 50%; }
+#trace-chip.bare { background: none; border-color: transparent; padding: 0; box-shadow: none; }
+#chip-select-all, #chip-here {
+  pointer-events: auto; cursor: pointer; margin-left: 10px; user-select: none;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 3px 10px; font-family: inherit; font-size: 12px;
+}
+#chip-select-all { display: inline-flex; align-items: center; gap: 6px; }
+#chip-select-all.hidden { display: none; }
+#chip-select-all input { accent-color: var(--accent); margin: 0; }
+#chip-select-all:hover, #chip-here:hover { border-color: var(--accent); }
+#chip-here { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+#chip-here:hover { background: var(--accent); color: var(--bg); }
+#trace-chip.bare #chip-here { margin-left: 0; }
 
 .flow-dash {
   stroke-dasharray: 5 9;
@@ -305,12 +319,12 @@ body.collapsed #trace-chip { left: 50%; }
 }
 #loc-go:hover { filter: brightness(1.1); }
 .loc-row2 { display: flex; gap: 6px; margin-top: 6px; }
-#loc-pick, #loc-here {
+#loc-pick {
   flex: 1; background: var(--panel-2); color: var(--text);
   border: 1px solid var(--border); border-radius: 7px;
   padding: 7px 6px; font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap;
 }
-#loc-pick:hover, #loc-here:hover { border-color: var(--accent); }
+#loc-pick:hover { border-color: var(--accent); }
 #loc-pick.active { background: var(--accent); color: #0d1218; border-color: var(--accent); font-weight: 600; }
 #loc-pick .when-on { display: none; }
 body.pick-mode #loc-pick .when-off { display: none; }
@@ -334,14 +348,6 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
   box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 
-.loc-select-all {
-  display: flex; align-items: center; gap: 7px; cursor: pointer;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px;
-  padding: 7px 10px; margin-top: 10px; font-size: 12.5px; user-select: none;
-}
-.loc-select-all input { accent-color: var(--accent); margin: 0; }
-.loc-select-all:has(input:not(:checked)) { opacity: 0.75; }
-.loc-select-all:hover { border-color: var(--accent); }
 .loc-list { list-style: none; margin: 10px 0 0; padding: 0; }
 .loc-list li { padding: 8px 9px; border-radius: 7px; cursor: pointer; }
 .loc-list li:hover { background: var(--panel-2); }
@@ -518,7 +524,7 @@ body.pick-mode .leaflet-container { cursor: crosshair !important; }
   #help-toggle { top: 60px; }
   #help-panel { top: 108px; }
   #loc-go { padding: 10px 14px; }
-  #loc-pick, #loc-here { padding: 10px 8px; }
+  #loc-pick { padding: 10px 8px; }
   #search, #loc-input { padding: 11px 12px; }
 }
 
