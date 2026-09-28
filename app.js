@@ -717,7 +717,9 @@
     secs.list.forEach((sec, si) => {
       for (const s of sec.stations) {
         if (s.lat == null || s.lon == null) continue;
-        const lvl = s.level != null ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short');
+        // a faulty station's level is a frozen last gasp — show the fault, not a stale number
+        const lvl = s.status !== 'faulty' && s.level != null
+          ? `${s.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short');
         L.circleMarker([s.lat, s.lon], {
           radius: 4.5, color: '#ffffff', weight: 1.6,
           fillColor: LIVE_COLOR[s.status] || NO_DATA_COLOR, fillOpacity: 1,
