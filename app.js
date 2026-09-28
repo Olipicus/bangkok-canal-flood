@@ -1055,6 +1055,8 @@
   }
   // multi-gauge canals become one polyline per reach so their colours read
   // reach by reach even before anything is selected
+  // every layer carrying a canal tooltip (hit + visible) — retranslated on language change
+  const tipLayers = [];
   let hoverTimer = null;
   function applyHover(f, on) {
     (featureToLayer.get(f) || []).forEach((layer, i) => {
