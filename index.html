@@ -56,7 +56,6 @@
     </div>
     <div class="loc-row2">
       <button id="loc-pick" type="button"><span class="when-off" data-i18n="loc_pick"></span><span class="when-on" data-i18n="loc_pick_active"></span></button>
-      <button id="loc-here" type="button" data-i18n="loc_here"></button>
     </div>
     <div class="loc-row3">
       <label for="loc-radius" data-i18n="loc_radius_label"></label>
@@ -88,7 +87,9 @@
 
 <div id="map"></div>
 <div id="trace-chip" class="hidden">
-  <span id="chip-loc"></span>
+  <span id="chip-loc" class="hidden"></span>
+  <label id="chip-select-all" class="hidden"><input type="checkbox" id="chip-select-all-box"><span data-i18n="select_all"></span></label>
+  <button id="chip-here" type="button" data-i18n="loc_here"></button>
 </div>
 
 <aside id="detail-panel">

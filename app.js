@@ -808,6 +808,7 @@
   }
 
   function searchLocation(latlng) {
+    chipMsg = null;
     selected = [];
     traceCache.clear();
     traceLayer.clearLayers();
@@ -831,7 +832,7 @@
     };
     refreshCanalStyles();
     drawLoc();
-    showChip('loc');
+    updateChip();
     showDetail(locHtml(), () => locHtml());
     closeDrawerOnMobile(); // let the map + bottom sheet take over
     map.flyTo([lat, lng], Math.max(map.getZoom(), 14), { duration: 0.9 });
@@ -897,13 +898,8 @@
         `<span class="meta">${kind} · ${fmtDist(x.d)}</span></button>`;
     }).join('');
 
-    // bulk toggle for the radius results: checked = every found canal is in
-    // the selection (traces stacked); a fresh search always renders it unchecked
-    const rowKey = it => it.f.properties.key || it.f.properties.name;
-    const allChecked = loc.items.every(it => selected.includes(rowKey(it)));
+    // the bulk "select all" toggle for the radius results lives on the map chip
     return html +
-      `<label class="loc-select-all"><input type="checkbox" id="loc-select-all"${allChecked ? ' checked' : ''}>` +
-      `<span>${t('select_all')}</span></label>` +
       `<ul class="loc-list">${rows}</ul>` +
       (loc.structs.length
         ? `<div class="pop-path"><div class="label">${t('loc_structs_near')}</div>${structRows}</div>` : '') +
@@ -1155,10 +1151,22 @@
   // ---------- selection / trace control ----------
   const chip = document.getElementById('trace-chip');
   const chipLoc = document.getElementById('chip-loc');
-  // the chip only carries the loc-mode hint now — trace mode shows nothing
-  function showChip(mode) {
-    chip.classList.toggle('hidden', mode === 'trace');
-    if (mode !== 'trace') chipLoc.textContent = t('loc_chip');
+  const chipSelAll = document.getElementById('chip-select-all');
+  const chipSelAllBox = document.getElementById('chip-select-all-box');
+  let chipMsg = null; // transient chip message (locating… / geolocation error)
+
+  // the floating control bar over the map: contextual message, the radius
+  // select-all toggle and the "my location" shortcut — always on screen
+  function updateChip() {
+    chip.classList.remove('hidden');
+    const msg = chipMsg || (loc && !selected.length ? t('loc_chip') : null);
+    chipLoc.classList.toggle('hidden', !msg);
+    if (msg) chipLoc.textContent = msg;
+    const canSelectAll = !!loc && loc.items.length > 0;
+    chipSelAll.classList.toggle('hidden', !canSelectAll);
+    if (canSelectAll) {
+      chipSelAllBox.checked = loc.items.every(it => selected.includes(it.f.properties.key || it.f.properties.name));
+    }
   }
   const panel = document.getElementById('detail-panel');
   const panelBody = document.getElementById('detail-body');
@@ -1269,7 +1277,7 @@
     refreshCanalStyles();
     if (!selected.length) { clearSelection(); return; }
     drawTrace();
-    showChip('trace');
+    updateChip();
     showDetail(selectionHtml(), () => selectionHtml());
   }
   function clearSelection() {
@@ -1280,7 +1288,8 @@
     loc = null;
     locLayer.clearLayers();
     refreshCanalStyles();
-    chip.classList.add('hidden');
+    chipMsg = null;
+    updateChip();
     hideDetail();
   }
   // ---------- help popover ----------
@@ -1329,12 +1338,13 @@
   document.getElementById('loc-go').addEventListener('click', doLocSearch);
   document.getElementById('loc-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLocSearch(); });
   pickBtn.addEventListener('click', () => setPickMode(!pickMode));
-  document.getElementById('loc-here').addEventListener('click', () => {
-    if (!navigator.geolocation) { locMsg(t('loc_geo_err')); return; }
-    locMsg(t('loc_locating'));
+  document.getElementById('chip-here').addEventListener('click', () => {
+    if (!navigator.geolocation) { chipMsg = t('loc_geo_err'); updateChip(); return; }
+    chipMsg = t('loc_locating');
+    updateChip();
     navigator.geolocation.getCurrentPosition(
-      pos => { locMsg(''); searchLocation(L.latLng(pos.coords.latitude, pos.coords.longitude)); },
-      () => locMsg(t('loc_geo_err')),
+      pos => { searchLocation(L.latLng(pos.coords.latitude, pos.coords.longitude)); },
+      () => { chipMsg = t('loc_geo_err'); updateChip(); },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
   });
 
@@ -1385,10 +1395,11 @@
     }
   });
 
-  // "select all" in the location panel: put every canal the search found inside
+  // the map-chip "select all" toggle: put every canal the search found inside
   // the radius into the multi-selection (each with its own drainage trace), or
-  // take them all back out. The panel stays on the loc results so the checkbox
-  // itself remains the toggle; traces map to the usual stacked rendering.
+  // take them all back out. The panel stays on the loc results; traces map to
+  // the usual stacked rendering. Unchecking the last canal returns the panel
+  // to the radius results.
   function setRadiusSelection(on) {
     if (!loc) return;
     for (const it of loc.items) {
@@ -1403,17 +1414,14 @@
       }
     }
     refreshCanalStyles();
-    if (selected.length) {
-      drawTrace();
-      showChip('trace');
-    } else {
-      traceLayer.clearLayers();
-      chip.classList.add('hidden');
+    if (selected.length) drawTrace();
+    else traceLayer.clearLayers();
+    updateChip();
+    if (!selected.length && !document.querySelector('#detail-body .loc-list')) {
+      showDetail(locHtml(), () => locHtml());
     }
   }
-  panelBody.addEventListener('change', e => {
-    if (e.target.id === 'loc-select-all') setRadiusSelection(e.target.checked);
-  });
+  chipSelAllBox.addEventListener('change', () => setRadiusSelection(chipSelAllBox.checked));
 
   // ---------- stats ----------
   const totalKm = canals.reduce((a, f) => a + f.properties.length_km, 0);
@@ -1585,7 +1593,7 @@
       for (const layer of layers) layer.setTooltipContent(displayName(f.properties));
     for (const { s, m } of structMarkers) m.setTooltipContent(displayName(s));
     if (selected.length) drawTrace(); // rebuild river/sea tooltips in the new language
-    if (loc) chipLoc.textContent = t('loc_chip');
+    updateChip();
     if (currentDetailRender) { panelBody.innerHTML = currentDetailRender(); updatePanelTitle(); }
     setSheetCollapsed(panel.classList.contains('collapsed')); // refresh the button title/aria
   }
