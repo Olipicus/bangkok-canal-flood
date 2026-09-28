@@ -17,8 +17,10 @@
 //      a last resort for station codes absent from both feeds above.
 //
 // Statuses follow flood69's KlongMap algorithm: broken telemetry (breaker /
-// rtu_door tripped, or no level at all) → faulty; level < dry_in (with
-// checkdry) → dry; ≥ critical → critical; ≥ warning → warning; else normal.
+// rtu_door tripped, or no level at all), BMA's own "out of order" marker, or
+// a reading older than a day (dead telemetry — the last value must not be
+// presented as a live status) → faulty; level < dry_in (with checkdry) → dry;
+// ≥ critical → critical; ≥ warning → warning; else normal.
 // Each station also carries status_agrees — whether the computed status matches
 // BMA's reported water_status_flood (1=normal 2=warning 3=critical) — computed
 // status stays authoritative when they differ.
@@ -227,6 +229,10 @@ const lookupName = name => { // try as-is, then without the คลอง/Khlong 
 // critical (above the critical bank level) > warning > dry (below the
 // low-water threshold) > normal; faulty carries no level info
 const RANK = { critical: 4, warning: 3, dry: 2, normal: 1, faulty: 0 };
+// a reading older than a day is dead telemetry, not a live status — the gauge
+// froze on whatever it last reported, so that value must not be presented as
+// the canal's current water level
+const STALE_MS = 24 * 60 * 60 * 1000;
 // flood69's algorithm (KlongMap): low water first, then bank thresholds —
 // level < dry_in (with checkdry) → dry, ≥ critical → critical,
 // ≥ warning → warning, else normal; broken telemetry or no level → faulty;
@@ -234,6 +240,12 @@ const RANK = { critical: 4, warning: 3, dry: 2, normal: 1, faulty: 0 };
 const OFFICIAL = { 1: 'normal', 2: 'warning', 3: 'critical' };
 const statusOf = st => {
   if (st.breaker || st.rtu_door || st.level == null) return 'faulty';
+  // BMA's own ขัดข้อง marker (pagemap-tier records carry it) — previously it
+  // lost to the threshold comparison below and a dead gauge showed as ปกติ
+  if (/out of order/i.test(st.txtStatus_en || '')) return 'faulty';
+  // frozen timestamp = the station stopped reporting; guard on ts != null so
+  // records without a parseable stamp keep their threshold-based status
+  if (st.ts != null && Date.now() - st.ts > STALE_MS) return 'faulty';
   if (Number(st.checkdry) === 1 && st.dry != null && st.level < st.dry) return 'dry';
   if (st.critical != null && st.level >= st.critical) return 'critical';
   if (st.warning != null && st.level >= st.warning) return 'warning';
@@ -382,6 +394,7 @@ function mapStations(records) {
       power: r.power, battery: r.battery, rtu_door: r.rtu_door, breaker: r.breaker,
       station_status: r.station_status,
       water_status: r.water_status, water_status_flood: r.water_status_flood,
+      txtStatus_en: r.txtStatus_en || null, // BMA's own fault marker, kept as evidence
       status_agrees: agreesWithOfficial(r),
       checkdry: r.checkdry, dry_out01: r.dry_out01,
       water_pump_last: r.water_pump_last, water_gate_last: r.water_gate_last,

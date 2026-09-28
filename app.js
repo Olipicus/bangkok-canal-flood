@@ -966,7 +966,8 @@
     if (secs) { // multi-gauge canal: one row per reach instead of a raw station dump
       const rows = secs.list.map((sec, i) => {
         const color = LIVE_COLOR[sec.status] || NO_DATA_COLOR;
-        const lvl = sec.main.level != null
+        // a faulty station's level is a frozen last gasp — show the fault, not a stale number
+        const lvl = sec.main.status !== 'faulty' && sec.main.level != null
           ? `${sec.main.level.toFixed(2)} ${t('live_unit')}` : t('live_faulty_short');
         const extra = sec.stations.length > 1
           ? ` <span class="sec-more" title="${esc(sec.stations.slice(1).map(stationName).join(' · '))}">+${sec.stations.length - 1}</span>` : '';
