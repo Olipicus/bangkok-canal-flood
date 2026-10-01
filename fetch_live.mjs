@@ -12,7 +12,8 @@
 //   2. the flood69 mirror (flood69.peoplesparty.or.th) — overlay for what the
 //      Summary page lacks: dry_in/checkdry/dry_out01 (low water) and
 //      water_pump_last/water_gate_last, plus a full fallback for the handful of
-//      stations the Summary page doesn't carry.
+//      stations the Summary page doesn't carry (since 2026-10 its live reading
+//      sits in a nested water_level_last object — see readingOf).
 //   3. BMA's map endpoint (POST /water/PageMap/GoogleMap) — the old source, now
 //      a last resort for station codes absent from both feeds above.
 //
@@ -43,11 +44,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------- fetch (the WAF 403s without a browser UA and often on the first
 // hit; a page session + retries calm it down) ----------
+// The WAF answers 429 when polled too hard (e.g. a refresh loop running every
+// few minutes) — once tripped, skip this host's remaining endpoints instead of
+// compounding the limit; the flood69 mirror carries the same stations anyway
+let bmaRateLimited = false;
+
 async function pageSession() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = await fetch(PAGE, { headers: { 'User-Agent': UA } });
     if (res.ok) return res.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
     console.error(`page attempt ${attempt}: HTTP ${res.status}`);
+    if (res.status === 429) { bmaRateLimited = true; return ''; }
     await wait(1500);
   }
   return ''; // sometimes the WAF lets a cookie-less request through anyway
@@ -55,9 +62,11 @@ async function pageSession() {
 
 async function getHtml(url, jar) {
   for (let attempt = 1; attempt <= 3; attempt++) {
+    if (bmaRateLimited) return null;
     const res = await fetch(url, { headers: { 'User-Agent': UA, 'Cookie': jar, 'Referer': PAGE } });
     if (res.ok) return res.text();
     console.error(`attempt ${attempt}: ${url} -> HTTP ${res.status}`);
+    if (res.status === 429) { bmaRateLimited = true; return null; }
     await wait(1500);
   }
   return null;
@@ -102,6 +111,7 @@ async function fetchSummary(jar) {
 // should the Summary page ever go away)
 async function fetchStations(jar) {
   for (let attempt = 1; attempt <= 2; attempt++) {
+    if (bmaRateLimited) return null;
     const res = await fetch(API, {
       method: 'POST',
       headers: {
@@ -116,6 +126,7 @@ async function fetchStations(jar) {
     });
     if (res.ok) return res.json();
     console.error(`map endpoint attempt ${attempt}: HTTP ${res.status}`);
+    if (res.status === 429) { bmaRateLimited = true; return null; }
     await wait(1500);
   }
   return null;
@@ -257,6 +268,16 @@ const statusOf = st => {
   return OFFICIAL[st.water_status_flood] || 'faulty'; // "out of order" / anything unexpected
 };
 
+// the mirror (and BMA's KlongMap upstream) moved the live reading out of the
+// station record into a nested water_level_last object (2026-10); older
+// snapshots carried it flat on the station record — accept either
+function readingOf(st) {
+  if (!st) return null;
+  const nested = st.water_level_last;
+  if (nested && (nested.wl_in != null || nested.site_timestamp != null)) return nested;
+  return (st.wl_in != null || st.site_timestamp != null) ? st : null;
+}
+
 function synthesize(summary, f69ByCode, mapByCode) {
   const { list, districts } = summary || { list: [], districts: new Map() };
   const districtOf = (id, th, en) => ({
@@ -300,6 +321,7 @@ function synthesize(summary, f69ByCode, mapByCode) {
   // tier 2 — flood69: full records for stations the Summary page lacks
   for (const [code, f] of f69ByCode) {
     if (merged.has(code)) continue;
+    const read = readingOf(f);
     merged.set(code, {
       source: 'flood69',
       code,
@@ -309,13 +331,13 @@ function synthesize(summary, f69ByCode, mapByCode) {
       river_name: f.river_name || null,
       ...districtOf(f.district_id, f.district_name, null),
       lat: f.latitude, lon: f.longitude,
-      ts: tsOf(f.site_timestamp),
-      level: clean(f.wl_in),
-      wl_out01: clean(f.wl_out01),
+      ts: tsOf(read?.site_timestamp),
+      level: clean(read?.wl_in),
+      wl_out01: clean(read?.wl_out01),
       warning: clean(f.warning), critical: clean(f.critical),
       warning_out01: clean(f.warning_out01), critical_out01: clean(f.critical_out01),
       left_bank: clean(f.left_bank), right_bank: clean(f.right_bank), bed_bank: clean(f.bed_bank),
-      max_in_day: clean(f.max_in_day),
+      max_in_day: clean(read?.max_in_day),
       power: null, battery: null, rtu_door: null, breaker: null,
       station_status: f.station_status ?? null,
       water_status: f.water_status ?? null,
@@ -503,6 +525,22 @@ const out = {
   canals: byCanalAgg,
   stations: stations.map(s => ({ ...s, canal: s.canal || null, match: s.match || null })),
 };
+// a run that returns station records but not a single parseable reading means
+// the feeds are degraded (WAF rate limit, another shape change) — not that
+// every gauge in the city went dark at once; keep the previous snapshot so the
+// site (and the refresh commit) never show an all-faulty map
+function previousLatestReading() {
+  try {
+    const m = fs.readFileSync('data/live_status.js', 'utf8').match(/window\.LIVE_STATUS = (\{.*\});/s);
+    return m ? JSON.parse(m[1]).latest_reading || 0 : 0;
+  } catch { return 0; }
+}
+if (latestReading === 0 && previousLatestReading() > 0) {
+  console.error('no valid station reading in this run — keeping the previous snapshot ' +
+    `(${new Date(previousLatestReading()).toISOString()})`);
+  process.exit(1);
+}
+
 fs.writeFileSync('data/live_status.js',
   '// generated by fetch_live.mjs — do not edit; refresh with `node fetch_live.mjs`\n' +
   'window.LIVE_STATUS = ' + JSON.stringify(out) + ';\n');

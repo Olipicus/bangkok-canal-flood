@@ -121,6 +121,9 @@ verified-vs-inferred-vs-not-found labels, plus a cross-check of the curated note
 - Live water levels: © Bangkok Metropolitan Administration, Drainage and
   Sewerage Department telemetry — <https://weather.bangkok.go.th/water>
   (Summary page as the primary feed, the KlongMap map endpoint as fallback).
+  BMA's WAF answers HTTP 429 when the endpoints are polled too hard — when it
+  does, the flood69 mirror below (which mirrors BMA's own KlongMap data)
+  supplies the readings instead.
   Stations attach to canals by name (`river_name` → the canal's Thai/English
   name), with a nearest-canal fallback within 200 m for stations whose canal
   isn't named in OSM (shown as "nearby station" in the UI). ~288 of ~312
@@ -175,8 +178,16 @@ station code, then maps them onto the canal network and writes
 array with clean levels, warning/critical thresholds, bank levels, daily maxima
 and RTU device health). The **flood69 mirror** is overlaid for everything the
 Summary page lacks — the low-water threshold (`dry_in` + `checkdry`) and
-pump/gate activity — and covers the handful of stations the Summary page
-doesn't carry. BMA's old map endpoint
+pump/gate activity — and covers the stations the Summary page doesn't carry;
+since October 2026 BMA's KlongMap feed nests the live reading (`wl_in`,
+`site_timestamp`, `max_in_day`) inside a `water_level_last` object instead of
+the station record, and the script accepts either shape. When BMA's WAF
+rate-limits (HTTP 429 — it does if polled more often than about every half
+hour) the script skips the remaining BMA calls for the run and rebuilds the
+whole snapshot from the flood69 mirror: same stations, levels and thresholds,
+minus the device-health fields only the Summary page carries. If a run comes
+back without a single parseable reading, the previous snapshot is kept
+untouched rather than overwritten with an all-faulty map. BMA's old map endpoint
 (`POST weather.bangkok.go.th/water/PageMap/GoogleMap` — it 403s without a
 session cookie and a browser User-Agent, and sends no CORS headers, which is
 why the site ships a generated snapshot instead of fetching live) remains the
@@ -186,7 +197,9 @@ normal; stations with tripped telemetry (breaker / RTU door) or no reading are
 faulty. Each station also records `status_agrees` — whether the computed status
 matches BMA's reported `water_status_flood` (1=normal 2=warning 3=critical);
 the computed status stays authoritative when they differ. Re-run it whenever
-you want fresher readings — the sidebar always shows how old the snapshot is.
+you want fresher readings (space runs at least ~30 minutes apart, or the WAF
+will throttle the endpoint for everyone) — the sidebar always shows how old the
+snapshot is.
 
 `fetch_flood69.mjs` adds today's Chao Phraya tide prediction (two high / two
 low tides, m MSD) to the sidebar. It reads the People's Party flood portal
